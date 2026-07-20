@@ -1,0 +1,187 @@
+import React, { useState } from 'react';
+import { User } from '../types';
+import Dashboard from './Dashboard';
+import NetworkTree from './NetworkTree';
+import Calculator from './Calculator';
+import Notifications from './Notifications';
+import Profile from './Profile';
+import AdminDashboard from './AdminDashboard';
+import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
+
+type Tab = 'dashboard' | 'network' | 'calculator' | 'profile' | 'admin';
+
+export default function MainLayout({ user, onUserUpdate }: { user: User; onUserUpdate: (updatedUser: User) => void }) {
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'network', label: 'Rede Ativa', icon: Users },
+    { id: 'calculator', label: 'Projeções', icon: CalcIcon },
+    { id: 'profile', label: 'Meu Perfil', icon: UserIcon },
+    { id: 'admin', label: 'Painel Admin', icon: Shield },
+  ] as const;
+
+  const NavContent = ({ isMobile = false }: { isMobile?: boolean }) => (
+    <>
+      <div className="px-6 flex items-center justify-between gap-4 mt-2">
+        <div className="flex items-center gap-3">
+          <img 
+            src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" 
+            alt="Logo" 
+            className="w-52 h-auto rounded-xl object-cover shadow-[0_0_15px_rgba(50,188,173,0.2)]" 
+            style={!isMobile ? { height: '63.846999999999994px' } : undefined}
+            referrerPolicy="no-referrer" 
+          />
+        </div>
+        
+        {/* Mobile menu close button */}
+        <button className="md:hidden text-slate-400 p-2" onClick={() => setMobileMenuOpen(false)}>
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="px-5 mt-6 mb-2 hidden md:block">
+        <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-800/80 shadow-sm relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-16 h-16 bg-[#32BCAD]/10 rounded-full blur-xl"></div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></div>
+            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Sessão Segura</p>
+          </div>
+          <p className="font-bold text-white text-sm truncate">{user.name}</p>
+          <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">{user.pixKey}</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto mt-4 md:mt-0">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all cursor-pointer relative overflow-hidden group ${
+                isActive ? 'bg-[#32BCAD]/10 text-[#32BCAD]' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'
+              }`}
+            >
+              {isActive && <motion.div layoutId="active-indicator" className="absolute left-0 top-1/4 h-1/2 w-1 bg-[#32BCAD] rounded-r-full" />}
+              <Icon size={20} className={isActive ? 'text-[#32BCAD]' : 'text-slate-500 group-hover:text-slate-400'} />
+              <span className="font-bold text-sm tracking-wide">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      
+      <div className="p-5 mt-auto border-t border-slate-800/50 space-y-4">
+        <button
+          onClick={() => signOut(auth)}
+          className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors bg-slate-800/50 hover:bg-slate-800 py-2 rounded-lg"
+        >
+          <LogOut size={14} />
+          Sair da Conta
+        </button>
+        <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+          <Shield size={12} className="text-slate-600" />
+          Proteção P2P Ativa
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col md:flex-row overflow-hidden font-sans selection:bg-[#32BCAD]/30 selection:text-white">
+      <Notifications user={user} />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#090e1a] border-b border-slate-800 relative z-20">
+        <div className="flex items-center gap-3">
+          <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Logo" className="w-[180px] h-auto rounded-lg object-cover" referrerPolicy="no-referrer" />
+        </div>
+        <button onClick={() => setMobileMenuOpen(true)} className="text-slate-300 p-1">
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex w-64 bg-[#090e1a] border-r border-slate-800/80 flex-col shrink-0 py-4 shadow-xl z-10 relative">
+        <NavContent />
+      </aside>
+
+      {/* Sidebar Mobile Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.aside 
+              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-72 bg-[#090e1a] border-r border-slate-800 shadow-2xl z-50 flex flex-col py-4"
+            >
+              <NavContent isMobile={true} />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#020617] flex flex-col relative">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#32BCAD]/5 rounded-full blur-[100px] pointer-events-none -mr-40 -mt-40"></div>
+        
+        <div className="max-w-6xl mx-auto flex-1 w-full relative z-10">
+          
+          <header className="mb-8 hidden md:flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-white tracking-tight">
+                {tabs.find(t => t.id === activeTab)?.label}
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">Gestão inteligente de doações P2P via PIX</p>
+            </div>
+            
+            <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-800 py-1.5 px-3 rounded-full">
+              <Activity size={14} className="text-[#32BCAD]" />
+              <span className="text-[11px] font-bold tracking-wider text-slate-300 uppercase">Rede Sincronizada</span>
+            </div>
+          </header>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {activeTab === 'dashboard' && <Dashboard user={user} />}
+              {activeTab === 'network' && <NetworkTree user={user} />}
+              {activeTab === 'calculator' && <Calculator />}
+              {activeTab === 'profile' && <Profile user={user} onUserUpdate={onUserUpdate} />}
+              {activeTab === 'admin' && <AdminDashboard currentUser={user} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <footer className="max-w-6xl mx-auto w-full mt-12 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-500 gap-3 border-t border-slate-800/50 pt-6 relative z-10">
+          <div className="flex gap-4">
+            <span className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+              SISTEMA OPERACIONAL
+            </span>
+            <span>VERIFICAÇÃO P2P ATIVA</span>
+          </div>
+          <p>© {new Date().getFullYear()} Direct Cash Pix • Tecnologia Segura de Ponta a Ponta</p>
+        </footer>
+      </main>
+    </div>
+  );
+}

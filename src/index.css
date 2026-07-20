@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pix: #32BCAD;
+  --color-pix-dark: #269689;
+  --color-pix-light: #5CE1D3;
+}
+
+body {
+  @apply bg-[#020617] text-slate-200 antialiased;
+}

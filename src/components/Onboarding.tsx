@@ -4,7 +4,7 @@ import { CheckCircle, Upload, ArrowRight, ShieldCheck, QrCode, AlertCircle, Load
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
 import { createStaticPix } from 'pix-utils';
 import { generateSimulatedReceiptSvg } from '../lib/receipt';
@@ -30,6 +30,63 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const getFriendlyAuthErrorMessage = (error: any): string => {
+    if (!error) return "Erro desconhecido.";
+    const code = error.code || (error.message && error.message.includes('popup-closed-by-user') ? 'auth/popup-closed-by-user' : '');
+    
+    switch (code) {
+      case 'auth/popup-closed-by-user':
+        return "A janela de login do Google foi fechada antes de concluir a autenticação. Por favor, clique novamente e mantenha a janela aberta até concluir.";
+      case 'auth/cancelled-popup-request':
+        return "O processo de login foi cancelado por outra tentativa. Por favor, tente novamente.";
+      case 'auth/popup-blocked':
+        return "O popup de login do Google foi bloqueado pelo seu navegador. Por favor, desative o bloqueador de popups para este site e tente novamente.";
+      case 'auth/network-request-failed':
+        return "Erro de conexão com o servidor. Verifique sua internet e tente novamente.";
+      case 'auth/internal-error':
+        return "Ocorreu um erro interno de autenticação. Por favor, tente novamente mais tarde.";
+      default:
+        return error.message || String(error);
+    }
+  };
+
+  const handleLoginOnly = async () => {
+    setIsLoggingIn(true);
+    setErrorMsg(null);
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const uid = userCredential.user.uid;
+      
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const userData = docSnap.data() as User;
+        if (userData.isActive) {
+          onComplete({ ...userData, uid });
+        } else {
+          setFormData({
+            name: userData.name,
+            pixKey: userData.pixKey,
+            pixType: userData.pixType,
+            uid: uid
+          });
+          setStep(2);
+        }
+      } else {
+        await auth.signOut();
+        setErrorMsg("Esta conta Google não está cadastrada no sistema. Por favor, preencha seus dados abaixo para criar sua conta.");
+      }
+    } catch (error: any) {
+      console.error("Error logging in:", error);
+      setErrorMsg(`Erro de autenticação: ${getFriendlyAuthErrorMessage(error)}`);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,26 +100,46 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
         const userCredential = await signInWithPopup(auth, provider);
         const uid = userCredential.user.uid;
         
+        // Check if user already exists
+        const docRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const userData = docSnap.data() as User;
+          if (userData.isActive) {
+            onComplete({ ...userData, uid });
+            return;
+          } else {
+            setFormData({
+              name: userData.name,
+              pixKey: userData.pixKey,
+              pixType: userData.pixType,
+              uid: uid
+            });
+            setStep(2);
+            return;
+          }
+        }
+
         const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
         
         const newUser: User = {
-          ...formData,
+          name: formData.name,
+          pixKey: formData.pixKey,
+          pixType: formData.pixType,
           uid,
           isActive: false,
           inviteCode,
           createdAt: serverTimestamp(),
         };
         
-        await setDoc(doc(db, 'users', uid), newUser);
-        // Do not call onComplete here, because they are not active yet, but we could if we want App.tsx to reload.
-        // Wait, if we call onComplete here, App.tsx will re-render and pass them back as initialUser because isActive is false.
-        // Let's just keep them in local state by moving to step 2, but we need to remember the UID.
-        setFormData(prev => ({ ...prev, uid })); // store uid in formData for step 2
+        await setDoc(docRef, newUser);
+        setFormData(prev => ({ ...prev, uid }));
       }
       setStep(2);
     } catch (error: any) {
       console.error("Error creating user:", error);
-      setErrorMsg(`Erro de autenticação: ${error.message || error}`);
+      setErrorMsg(`Erro de autenticação: ${getFriendlyAuthErrorMessage(error)}`);
     } finally {
       setIsRegistering(false);
     }
@@ -180,8 +257,39 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
                   <input required type="text" value={formData.pixKey} onChange={e => setFormData({ ...formData, pixKey: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="Sua chave" />
                 </div>
               </div>
-              <button type="submit" className="w-full bg-[#32BCAD] hover:bg-[#269689] text-slate-900 font-bold tracking-widest uppercase text-xs rounded-xl px-4 py-4 mt-6 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(50,188,173,0.3)]">
-                Continuar para Ativação <ArrowRight size={16} />
+
+              {errorMsg && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-xs font-medium">
+                  {errorMsg}
+                </div>
+              )}
+
+              <button type="submit" disabled={isRegistering || isLoggingIn} className="w-full bg-[#32BCAD] hover:bg-[#269689] disabled:bg-slate-850 disabled:text-slate-500 text-slate-900 font-bold tracking-widest uppercase text-xs rounded-xl px-4 py-4 mt-6 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(50,188,173,0.3)]">
+                {isRegistering ? (
+                  <><Loader2 size={16} className="animate-spin" /> Cadastrando...</>
+                ) : (
+                  <>Continuar para Ativação <ArrowRight size={16} /></>
+                )}
+              </button>
+
+              <div className="relative my-6 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-800"></div>
+                </div>
+                <span className="relative px-3 bg-slate-950 text-slate-500 text-xs uppercase tracking-wider">ou acessar conta</span>
+              </div>
+
+              <button 
+                type="button"
+                onClick={handleLoginOnly}
+                disabled={isRegistering || isLoggingIn}
+                className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:bg-slate-850 disabled:text-slate-500 text-white font-bold tracking-widest uppercase text-xs rounded-xl px-4 py-4 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {isLoggingIn ? (
+                  <><Loader2 size={16} className="animate-spin" /> Acessando...</>
+                ) : (
+                  <>Entrar com Google</>
+                )}
               </button>
             </form>
           </motion.div>

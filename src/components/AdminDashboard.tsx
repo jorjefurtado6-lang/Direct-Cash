@@ -3,7 +3,7 @@ import { User } from '../types';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { 
-  collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs, where, limit, setDoc, serverTimestamp
+  collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, where, limit, setDoc, serverTimestamp
 } from 'firebase/firestore';
 import { 
   Shield, Users, Check, X, Lock, Unlock, TrendingUp, Wallet, FileText, 
@@ -53,26 +53,47 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Auto-elevate owner/admin
+  // Auto-elevate owner/admin and verify administrative Firestore role
   useEffect(() => {
-    if (activeFirebaseUser?.email === 'jorjefurtado6@gmail.com') {
-      const elevateAdmin = async () => {
-        try {
-          const userRef = doc(db, 'users', activeFirebaseUser.uid);
-          await setDoc(userRef, { 
-            uid: activeFirebaseUser.uid,
-            name: activeFirebaseUser.displayName || 'Admin',
-            email: activeFirebaseUser.email,
-            isAdmin: true 
-          }, { merge: true });
-          setIsAuthenticated(true);
-          sessionStorage.setItem('admin_authenticated', 'true');
-        } catch (err) {
-          console.error("Erro ao auto-autenticar admin:", err);
+    if (!activeFirebaseUser) return;
+
+    const checkAndElevateAdmin = async () => {
+      try {
+        const userRef = doc(db, 'users', activeFirebaseUser.uid);
+        const docSnap = await getDoc(userRef);
+        
+        const isOwnerEmail = activeFirebaseUser.email === 'jorjefurtado6@gmail.com';
+        const hasAdminRole = docSnap.exists() && (docSnap.data() as User).isAdmin === true;
+
+        if (isOwnerEmail || hasAdminRole) {
+          // If it's the owner and their document doesn't have isAdmin, set it
+          if (isOwnerEmail && (!docSnap.exists() || !(docSnap.data() as User).isAdmin)) {
+            await setDoc(userRef, { 
+              uid: activeFirebaseUser.uid,
+              name: activeFirebaseUser.displayName || 'Admin',
+              email: activeFirebaseUser.email,
+              isAdmin: true 
+            }, { merge: true });
+          }
+          
+          // Verify if they already solved the PIN challenge in this session
+          const isSessionApproved = sessionStorage.getItem('admin_authenticated') === 'true';
+          if (isSessionApproved) {
+            setIsAuthenticated(true);
+          }
+          setAuthError(null);
+        } else {
+          // KICK OUT unauthorized Google account!
+          setAuthError(`Acesso negado. A conta ${activeFirebaseUser.email} não possui privilégios de administrador.`);
+          await auth.signOut();
         }
-      };
-      elevateAdmin();
-    }
+      } catch (err: any) {
+        console.error("Erro ao verificar status admin no Firestore:", err);
+        setAuthError(`Erro de verificação: ${err.message || err}`);
+      }
+    };
+
+    checkAndElevateAdmin();
   }, [activeFirebaseUser]);
 
   // Firestore Data State
@@ -212,27 +233,36 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
   // Handle Passcode Auth
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Default PIN: 2026 or admin123
-    if (passcode === '2026' || passcode === 'admin123' || currentUser?.uid === 'admin') {
-      if (activeFirebaseUser) {
-        try {
-          const userRef = doc(db, 'users', activeFirebaseUser.uid);
-          await setDoc(userRef, { 
-            uid: activeFirebaseUser.uid,
-            name: activeFirebaseUser.displayName || 'Admin',
-            email: activeFirebaseUser.email,
-            isAdmin: true 
-          }, { merge: true });
-        } catch (err: any) {
-          console.error("Erro ao registrar status admin:", err);
-        }
+    if (!activeFirebaseUser) {
+      setAuthError('Por favor, faça login com o Google primeiro.');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', activeFirebaseUser.uid);
+      const docSnap = await getDoc(userRef);
+      
+      const isOwnerEmail = activeFirebaseUser.email === 'jorjefurtado6@gmail.com';
+      const hasAdminRole = docSnap.exists() && (docSnap.data() as User).isAdmin === true;
+
+      if (!isOwnerEmail && !hasAdminRole) {
+        setAuthError('Acesso negado. Esta conta não possui privilégios de administrador.');
+        await auth.signOut();
+        return;
       }
-      setIsAuthenticated(true);
-      sessionStorage.setItem('admin_authenticated', 'true');
-      setAuthError(null);
-    } else {
-      setAuthError('Código de acesso inválido. Tente novamente.');
-      setPasscode('');
+
+      // Default PIN: 2026 or admin123
+      if (passcode === '2026' || passcode === 'admin123') {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('admin_authenticated', 'true');
+        setAuthError(null);
+      } else {
+        setAuthError('Código de acesso inválido. Tente novamente.');
+        setPasscode('');
+      }
+    } catch (err: any) {
+      console.error("Erro na validação do PIN:", err);
+      setAuthError(`Erro de autenticação: ${err.message || err}`);
     }
   };
 
@@ -608,6 +638,26 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
 
   // Gate Screen (Not authenticated)
   if (!isAuthenticated) {
+    const getFriendlyAuthErrorMessage = (error: any): string => {
+      if (!error) return "Erro desconhecido.";
+      const code = error.code || (error.message && error.message.includes('popup-closed-by-user') ? 'auth/popup-closed-by-user' : '');
+      
+      switch (code) {
+        case 'auth/popup-closed-by-user':
+          return "A janela de login do Google foi fechada antes de concluir a autenticação. Por favor, clique novamente e mantenha a janela aberta até concluir.";
+        case 'auth/cancelled-popup-request':
+          return "O processo de login foi cancelado por outra tentativa. Por favor, tente novamente.";
+        case 'auth/popup-blocked':
+          return "O popup de login do Google foi bloqueado pelo seu navegador. Por favor, desative o bloqueador de popups para este site e tente novamente.";
+        case 'auth/network-request-failed':
+          return "Erro de conexão com o servidor. Verifique sua internet e tente novamente.";
+        case 'auth/internal-error':
+          return "Ocorreu um erro interno de autenticação. Por favor, tente novamente mais tarde.";
+        default:
+          return error.message || String(error);
+      }
+    };
+
     const handleGoogleSignIn = async () => {
       setAuthError(null);
       try {
@@ -615,7 +665,7 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
         await signInWithPopup(auth, provider);
       } catch (err: any) {
         console.error("Erro ao autenticar com o Google:", err);
-        setAuthError(`Erro no login Google: ${err.message || err}`);
+        setAuthError(`Erro no login Google: ${getFriendlyAuthErrorMessage(err)}`);
       }
     };
 

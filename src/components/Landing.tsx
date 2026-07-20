@@ -668,74 +668,73 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-white mb-4">O que dizem nossos membros</h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Milhares de pessoas já estão utilizando a rede P2P inteligente para receber doações diretas de forma segura e transparente.
+              Assista aos relatos reais de quem já ativou o Direct Cash Pix e está colhendo resultados diários de forma transparente e descentralizada.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, i) => (
-              <div key={i} className="bg-[#121212] p-8 rounded-2xl border border-white/5 hover:border-[#00FF85]/30 transition-all group">
-                <div className="flex text-[#00FF85] mb-6 gap-1">
-                  {[...Array(5)].map((_, j) => (
-                    <Star key={j} size={16} fill="currentColor" />
-                  ))}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              { src: depo1, title: "Resultados com doações instantâneas", duration: "Membro Ativo" },
+              { src: depo2, title: "Ativação simples e rápida via PIX", duration: "Membro Ativo" },
+              { src: depo3, title: "Como o sistema mudou minha perspectiva", duration: "Membro Ativo" }
+            ].map((video, idx) => (
+              <div key={idx} className="bg-[#121212] rounded-2xl border border-white/5 overflow-hidden group hover:border-[#00FF85]/30 transition-all flex flex-col shadow-2xl">
+                <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
+                  <video
+                    src={video.src}
+                    controls
+                    playsInline
+                    className="w-full h-full object-contain"
+                    preload="metadata"
+                  />
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-8 italic">
-                  "{testimonial.text}"
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-white/10 group-hover:border-[#00FF85]/50 transition-colors">
-                    {testimonial.name.charAt(0)}
-                  </div>
+                <div className="p-5 flex flex-col justify-between flex-grow bg-slate-950/40">
                   <div>
-                    <h4 className="text-white font-bold text-sm">{testimonial.name}</h4>
-                    <p className="text-slate-500 text-xs">{testimonial.role}</p>
+                    <span className="text-[10px] bg-[#00FF85]/10 text-[#00FF85] border border-[#00FF85]/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+                      {video.duration}
+                    </span>
+                    <h4 className="text-white font-bold text-sm mt-4 group-hover:text-[#00FF85] transition-colors leading-snug">
+                      {video.title}
+                    </h4>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Video Testimonials */}
+          {/* Fictitious/Written Testimonials */}
           <div className="mt-20 pt-16 border-t border-white/5">
             <div className="text-center mb-12">
-              <h3 className="text-2xl font-bold text-white mb-3">Depoimentos em Vídeo</h3>
+              <h3 className="text-2xl font-bold text-white mb-3">Experiências de Membros</h3>
               <p className="text-slate-400 text-sm max-w-xl mx-auto">
-                Assista aos relatos reais de quem já ativou o Direct Cash Pix e está colhendo resultados diários.
+                Confira as avaliações espontâneas compartilhadas por membros ativos da rede Direct Cash Pix.
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {[
-                { src: depo1, title: "Resultados com doações instantâneas", duration: "Membro Ativo" },
-                { src: depo2, title: "Ativação simples e rápida via PIX", duration: "Membro Ativo" },
-                { src: depo3, title: "Como o sistema mudou minha perspectiva", duration: "Membro Ativo" }
-              ].map((video, idx) => (
-                <div key={idx} className="bg-[#121212] rounded-2xl border border-white/5 overflow-hidden group hover:border-[#00FF85]/30 transition-all flex flex-col shadow-2xl">
-                  <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
-                    <video
-                      src={video.src}
-                      controls
-                      playsInline
-                      className="w-full h-full object-contain"
-                      preload="metadata"
-                    />
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {testimonials.map((testimonial, i) => (
+                <div key={i} className="bg-[#121212] p-8 rounded-2xl border border-white/5 hover:border-[#00FF85]/30 transition-all group">
+                  <div className="flex text-[#00FF85] mb-6 gap-1">
+                    {[...Array(5)].map((_, j) => (
+                      <Star key={j} size={16} fill="currentColor" />
+                    ))}
                   </div>
-                  <div className="p-5 flex flex-col justify-between flex-grow bg-slate-950/40">
+                  <p className="text-slate-300 text-sm leading-relaxed mb-8 italic">
+                    "{testimonial.text}"
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 font-bold border border-white/10 group-hover:border-[#00FF85]/50 transition-colors">
+                      {testimonial.name.charAt(0)}
+                    </div>
                     <div>
-                      <span className="text-[10px] bg-[#00FF85]/10 text-[#00FF85] border border-[#00FF85]/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
-                        {video.duration}
-                      </span>
-                      <h4 className="text-white font-bold text-sm mt-4 group-hover:text-[#00FF85] transition-colors leading-snug">
-                        {video.title}
-                      </h4>
+                      <h4 className="text-white font-bold text-sm">{testimonial.name}</h4>
+                      <p className="text-slate-500 text-xs">{testimonial.role}</p>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
       </section>
 

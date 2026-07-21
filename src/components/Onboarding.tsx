@@ -34,7 +34,14 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
 
   const getFriendlyAuthErrorMessage = (error: any): string => {
     if (!error) return "Erro desconhecido.";
-    const code = error.code || (error.message && error.message.includes('popup-closed-by-user') ? 'auth/popup-closed-by-user' : '');
+    let code = error.code || '';
+    if (!code && error.message) {
+      if (error.message.includes('popup-closed-by-user')) {
+        code = 'auth/popup-closed-by-user';
+      } else if (error.message.includes('unauthorized-domain')) {
+        code = 'auth/unauthorized-domain';
+      }
+    }
     
     switch (code) {
       case 'auth/popup-closed-by-user':
@@ -47,6 +54,8 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
         return "Erro de conexão com o servidor. Verifique sua internet e tente novamente.";
       case 'auth/internal-error':
         return "Ocorreu um erro interno de autenticação. Por favor, tente novamente mais tarde.";
+      case 'auth/unauthorized-domain':
+        return `O domínio '${window.location.hostname}' não está autorizado no Firebase. Adicione este domínio na lista de "Domínios Autorizados" em: Console do Firebase > Authentication > Settings > Authorized Domains.`;
       default:
         return error.message || String(error);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from '../types';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { 
   collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, where, limit, setDoc, serverTimestamp
 } from 'firebase/firestore';
@@ -50,12 +50,21 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('admin_authenticated') === 'true';
   });
-  const [passcode, setPasscode] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [invitePin, setInvitePin] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Auto-elevate owner/admin and verify administrative Firestore role
   useEffect(() => {
-    if (!activeFirebaseUser) return;
+    if (!activeFirebaseUser) {
+      setIsAuthenticated(false);
+      sessionStorage.removeItem('admin_authenticated');
+      return;
+    }
 
     const checkAndElevateAdmin = async () => {
       try {
@@ -76,16 +85,21 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
             }, { merge: true });
           }
           
-          // Verify if they already solved the PIN challenge in this session
-          const isSessionApproved = sessionStorage.getItem('admin_authenticated') === 'true';
-          if (isSessionApproved) {
-            setIsAuthenticated(true);
-          }
+          sessionStorage.setItem('admin_authenticated', 'true');
+          setIsAuthenticated(true);
           setAuthError(null);
         } else {
-          // KICK OUT unauthorized Google account!
-          setAuthError(`Acesso negado. A conta ${activeFirebaseUser.email} não possui privilégios de administrador.`);
-          await auth.signOut();
+          // KICK OUT unauthorized account, unless they already completed PIN registration/challenge
+          const isSessionApproved = sessionStorage.getItem('admin_authenticated') === 'true';
+          if (!isSessionApproved) {
+            setAuthError(`Acesso negado. A conta ${activeFirebaseUser.email} não possui privilégios de administrador.`);
+            setIsAuthenticated(false);
+            sessionStorage.removeItem('admin_authenticated');
+            await signOut(auth);
+          } else {
+            setIsAuthenticated(true);
+            setAuthError(null);
+          }
         }
       } catch (err: any) {
         console.error("Erro ao verificar status admin no Firestore:", err);
@@ -230,39 +244,114 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
     }
   };
 
-  // Handle Passcode Auth
+  // Handle Email & Password Admin Auth
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeFirebaseUser) {
-      setAuthError('Por favor, faça login com o Google primeiro.');
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Por favor, preencha todos os campos.');
       return;
     }
 
-    try {
-      const userRef = doc(db, 'users', activeFirebaseUser.uid);
-      const docSnap = await getDoc(userRef);
-      
-      const isOwnerEmail = activeFirebaseUser.email === 'jorjefurtado6@gmail.com';
-      const hasAdminRole = docSnap.exists() && (docSnap.data() as User).isAdmin === true;
-
-      if (!isOwnerEmail && !hasAdminRole) {
-        setAuthError('Acesso negado. Esta conta não possui privilégios de administrador.');
-        await auth.signOut();
+    if (isRegistering) {
+      if (password !== confirmPassword) {
+        setAuthError('As senhas não coincidem. Por favor, redigite-as.');
         return;
       }
+      if (invitePin !== '2026' && invitePin !== 'admin123') {
+        setAuthError('Código PIN de convite administrativo inválido. Você deve usar o PIN de administrador oficial para registrar.');
+        return;
+      }
+    }
 
-      // Default PIN: 2026 or admin123
-      if (passcode === '2026' || passcode === 'admin123') {
-        setIsAuthenticated(true);
+    setLoginLoading(true);
+    setAuthError(null);
+
+    const getFriendlyAuthErrorMessage = (error: any): string => {
+      if (!error) return "Erro desconhecido.";
+      const code = error.code || error.message || '';
+      
+      if (code.includes('auth/invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+        return "E-mail ou senha incorretos. Se você usava login do Google com este e-mail anteriormente, registre um e-mail administrativo com senha usando um apelido ou outro e-mail (ex: jorjefurtado6+admin@gmail.com) clicando em 'Criar nova conta de administrador' abaixo.";
+      }
+      if (code.includes('auth/email-already-in-use')) {
+        return "Este e-mail já está sendo utilizado pelo login do Google. Para acessar via e-mail/senha, por favor registre-se com um e-mail alternativo ou use o apelido de e-mail (ex: jorjefurtado6+admin@gmail.com) clicando em 'Criar nova conta de administrador' abaixo.";
+      }
+      if (code.includes('auth/weak-password')) {
+        return "A senha deve conter no mínimo 6 caracteres.";
+      }
+      if (code.includes('auth/invalid-email')) {
+        return "O formato do e-mail inserido é inválido.";
+      }
+      if (code.includes('auth/user-disabled')) {
+        return "Esta conta de administrador foi desativada.";
+      }
+      if (code.includes('auth/network-request-failed')) {
+        return "Erro de conexão. Verifique sua conexão com a internet e tente novamente.";
+      }
+      if (code.includes('auth/too-many-requests')) {
+        return "Acesso temporariamente bloqueado devido a muitas tentativas incorretas. Tente novamente mais tarde.";
+      }
+      return error.message || String(error);
+    };
+
+    try {
+      if (isRegistering) {
+        // 1. Create user with email and password
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+
+        // 2. Set user doc in Firestore
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { 
+          uid: user.uid,
+          name: 'Administrador',
+          email: user.email,
+          isAdmin: true,
+          isActive: true
+        }, { merge: true });
+
         sessionStorage.setItem('admin_authenticated', 'true');
+        setIsAuthenticated(true);
         setAuthError(null);
+        setIsRegistering(false);
       } else {
-        setAuthError('Código de acesso inválido. Tente novamente.');
-        setPasscode('');
+        // 1. Sign in with email and password
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+
+        // 2. Fetch their Firestore user document to verify admin role
+        const userRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userRef);
+        
+        const isOwnerEmail = user.email === 'jorjefurtado6@gmail.com';
+        const hasAdminRole = docSnap.exists() && (docSnap.data() as User).isAdmin === true;
+
+        if (isOwnerEmail || hasAdminRole) {
+          // Automatically create or update the user doc for the owner if it doesn't exist
+          if (isOwnerEmail && (!docSnap.exists() || !(docSnap.data() as User).isAdmin)) {
+            await setDoc(userRef, { 
+              uid: user.uid,
+              name: user.displayName || 'Admin',
+              email: user.email,
+              isAdmin: true 
+            }, { merge: true });
+          }
+
+          sessionStorage.setItem('admin_authenticated', 'true');
+          setIsAuthenticated(true);
+          setAuthError(null);
+        } else {
+          setAuthError(`Acesso negado. A conta ${user.email} não possui privilégios de administrador.`);
+          setIsAuthenticated(false);
+          sessionStorage.removeItem('admin_authenticated');
+          await signOut(auth);
+        }
       }
     } catch (err: any) {
-      console.error("Erro na validação do PIN:", err);
-      setAuthError(`Erro de autenticação: ${err.message || err}`);
+      console.error("Erro ao autenticar administrador:", err);
+      setAuthError(getFriendlyAuthErrorMessage(err));
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -638,124 +727,159 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
 
   // Gate Screen (Not authenticated)
   if (!isAuthenticated) {
-    const getFriendlyAuthErrorMessage = (error: any): string => {
-      if (!error) return "Erro desconhecido.";
-      const code = error.code || (error.message && error.message.includes('popup-closed-by-user') ? 'auth/popup-closed-by-user' : '');
-      
-      switch (code) {
-        case 'auth/popup-closed-by-user':
-          return "A janela de login do Google foi fechada antes de concluir a autenticação. Por favor, clique novamente e mantenha a janela aberta até concluir.";
-        case 'auth/cancelled-popup-request':
-          return "O processo de login foi cancelado por outra tentativa. Por favor, tente novamente.";
-        case 'auth/popup-blocked':
-          return "O popup de login do Google foi bloqueado pelo seu navegador. Por favor, desative o bloqueador de popups para este site e tente novamente.";
-        case 'auth/network-request-failed':
-          return "Erro de conexão com o servidor. Verifique sua internet e tente novamente.";
-        case 'auth/internal-error':
-          return "Ocorreu um erro interno de autenticação. Por favor, tente novamente mais tarde.";
-        default:
-          return error.message || String(error);
-      }
-    };
-
-    const handleGoogleSignIn = async () => {
-      setAuthError(null);
-      try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-      } catch (err: any) {
-        console.error("Erro ao autenticar com o Google:", err);
-        setAuthError(`Erro no login Google: ${getFriendlyAuthErrorMessage(err)}`);
-      }
-    };
-
     return (
       <div className="max-w-md mx-auto my-12 bg-slate-900/50 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#32BCAD]/10 rounded-full blur-2xl pointer-events-none"></div>
         
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-[#32BCAD]/10 border border-[#32BCAD]/20 text-[#32BCAD] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(50,188,173,0.15)]">
-            <Lock size={32} />
+            {isRegistering ? <UserPlus size={32} /> : <Lock size={32} />}
           </div>
-          <h3 className="text-xl font-bold text-white tracking-tight">Console de Segurança</h3>
-          <p className="text-slate-400 text-xs mt-1.5">Autentique-se com o Google e insira o PIN de acesso</p>
+          <h3 className="text-xl font-bold text-white tracking-tight">
+            {isRegistering ? "Registro de Administrador" : "Painel do Administrador"}
+          </h3>
+          <p className="text-slate-400 text-xs mt-1.5">
+            {isRegistering 
+              ? "Crie uma nova conta com e-mail, senha e PIN" 
+              : "Insira seu e-mail e senha de acesso"}
+          </p>
         </div>
 
-        <div className="space-y-6">
-          {/* Step 1: Firebase Auth status and action */}
-          <div className="bg-slate-950/40 border border-slate-800/80 p-5 rounded-2xl space-y-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">1. Autenticação Google</span>
-              {activeFirebaseUser ? (
-                <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-bold uppercase tracking-wide">Conectado</span>
-              ) : (
-                <span className="text-[9px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-bold uppercase tracking-wide">Pendente</span>
-              )}
+        {/* Info Box about Google Email clash */}
+        <div className="mb-5 bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] p-4 rounded-xl space-y-1.5">
+          <p className="font-bold flex items-center gap-1.5 text-blue-400">
+            <Info size={14} className="shrink-0 text-blue-400" />
+            Dica para Administradores:
+          </p>
+          <p className="leading-relaxed text-slate-300 text-xs">
+            Se seu e-mail (como <strong className="text-white font-mono">jorjefurtado6@gmail.com</strong>) já está cadastrado via Google, o Firebase impedirá o cadastro direto com senha.
+          </p>
+          <p className="leading-relaxed text-slate-300 text-xs">
+            👉 <strong>Solução Simples:</strong> Registre um apelido usando o símbolo <strong className="text-[#32BCAD] font-bold">+</strong> (ex: <strong className="text-white font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800">jorjefurtado6+admin@gmail.com</strong>) clicando abaixo. As notificações ainda irão para o seu e-mail original!
+          </p>
+        </div>
+
+        <form onSubmit={handleAuthSubmit} className="space-y-5">
+          {/* Email input */}
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">E-mail Administrativo</label>
+            <div className="relative">
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@exemplo.com"
+                disabled={loginLoading}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] disabled:opacity-50 text-white text-xs py-3 px-4 pl-11 rounded-xl outline-none transition-all placeholder:text-slate-700"
+                autoFocus
+                required
+              />
+              <FileText className="absolute left-4 top-3.5 text-slate-700" size={16} />
             </div>
-            
-            {activeFirebaseUser ? (
-              <div className="text-xs text-slate-300">
-                Conectado como <strong className="text-white block truncate">{activeFirebaseUser.displayName || 'Usuário'}</strong>
-                <span className="text-slate-500 text-[11px] font-mono block truncate">{activeFirebaseUser.email}</span>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-slate-400 text-xs leading-relaxed">
-                  Para carregar os dados com segurança do banco de dados, você precisa primeiro se conectar com sua conta do Google.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  className="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs py-3 px-4 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 border border-slate-200"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                  </svg>
-                  Fazer Login com Google
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Step 2: Passcode PIN Form */}
-          <form onSubmit={handleAuthSubmit} className="space-y-5">
-            <div>
-              <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-2">2. Código PIN do Administrador</label>
-              <div className="relative">
-                <input 
-                  type="password" 
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder={activeFirebaseUser ? "Digite o PIN de acesso (ex: 2026)" : "Conecte o Google acima primeiro"}
-                  disabled={!activeFirebaseUser}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] disabled:opacity-50 text-white font-mono text-center text-lg tracking-widest py-3.5 px-4 rounded-xl outline-none transition-all placeholder:text-slate-700 placeholder:text-xs placeholder:font-sans placeholder:tracking-normal"
-                  autoFocus={!!activeFirebaseUser}
-                />
-                <KeyRound className="absolute right-4 top-4 text-slate-700" size={18} />
-              </div>
-              {authError && (
-                <p className="text-red-400 text-[11px] mt-2 flex items-center gap-1.5 font-medium">
-                  <AlertCircle size={12} /> {authError}
-                </p>
-              )}
+          {/* Password input */}
+          <div className="space-y-2">
+            <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Senha de Acesso</label>
+            <div className="relative">
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={loginLoading}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] disabled:opacity-50 text-white text-xs py-3 px-4 pl-11 rounded-xl outline-none transition-all placeholder:text-slate-700"
+                required
+              />
+              <KeyRound className="absolute left-4 top-3.5 text-slate-700" size={16} />
             </div>
+          </div>
 
-            <button 
-              type="submit"
-              disabled={!activeFirebaseUser}
-              className="w-full bg-[#32BCAD] hover:bg-[#269689] text-slate-900 font-bold uppercase tracking-widest text-xs py-4 rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(50,188,173,0.2)] transition-all flex items-center justify-center gap-2"
-            >
-              <Unlock size={14} className="stroke-[3]" /> Autenticar Painel
-            </button>
-          </form>
+          {/* Registration specific fields */}
+          {isRegistering && (
+            <>
+              {/* Confirm Password input */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">Confirmar Senha</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={loginLoading}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] disabled:opacity-50 text-white text-xs py-3 px-4 pl-11 rounded-xl outline-none transition-all placeholder:text-slate-700"
+                    required
+                  />
+                  <KeyRound className="absolute left-4 top-3.5 text-slate-700" size={16} />
+                </div>
+              </div>
+
+              {/* Invite PIN input */}
+              <div className="space-y-2">
+                <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block">PIN de Convite de Administrador</label>
+                <div className="relative">
+                  <input 
+                    type="password" 
+                    value={invitePin}
+                    onChange={(e) => setInvitePin(e.target.value)}
+                    placeholder="Digite o PIN (ex: 2026)"
+                    disabled={loginLoading}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] disabled:opacity-50 text-white text-xs py-3 px-4 pl-11 rounded-xl outline-none transition-all placeholder:text-slate-700"
+                    required
+                  />
+                  <Shield className="absolute left-4 top-3.5 text-slate-700" size={16} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {authError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-4 rounded-xl flex gap-2.5 items-start">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <p className="font-medium leading-relaxed">{authError}</p>
+            </div>
+          )}
+
+          <button 
+            type="submit"
+            disabled={loginLoading}
+            className="w-full bg-[#32BCAD] hover:bg-[#269689] text-slate-900 font-bold uppercase tracking-widest text-xs py-4 rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(50,188,173,0.2)] transition-all flex items-center justify-center gap-2"
+          >
+            {loginLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin stroke-[3]" /> Processando...
+              </>
+            ) : isRegistering ? (
+              <>
+                <UserPlus size={14} className="stroke-[3]" /> Criar Conta Admin
+              </>
+            ) : (
+              <>
+                <Unlock size={14} className="stroke-[3]" /> Acessar Painel
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setAuthError(null);
+              setConfirmPassword('');
+              setInvitePin('');
+            }}
+            className="text-[#32BCAD] hover:text-[#269689] text-xs font-bold transition-all"
+          >
+            {isRegistering ? "← Voltar para o Login" : "Criar nova conta de administrador"}
+          </button>
         </div>
 
         <div className="mt-8 border-t border-slate-800/80 pt-5 text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold">
           <Info className="inline mr-1 -mt-0.5" size={12} />
-          PIN Padrão do Sistema: <span className="text-slate-400 font-mono">2026</span>
+          {isRegistering ? "Código PIN de administrador padrão: 2026" : "Área restrita a administradores autorizados."}
         </div>
       </div>
     );
@@ -763,6 +887,29 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+
+      {/* Admin Session Info Bar */}
+      <div className="bg-slate-950/40 p-4 rounded-2xl border border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#32BCAD]/10 border border-[#32BCAD]/20 text-[#32BCAD] rounded-xl flex items-center justify-center">
+            <Shield size={20} />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white">Sessão Administrativa Ativa</h4>
+            <p className="text-[10px] text-slate-500 font-mono mt-0.5">{activeFirebaseUser?.email}</p>
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            sessionStorage.removeItem('admin_authenticated');
+            setIsAuthenticated(false);
+            await signOut(auth);
+          }}
+          className="text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 py-2 border border-red-500/20 rounded-xl transition-all cursor-pointer flex items-center gap-2"
+        >
+          <Lock size={12} /> Sair do Painel
+        </button>
+      </div>
       
       {/* Sub Tabs Bar */}
       <div className="flex flex-wrap bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/85 gap-1.5">

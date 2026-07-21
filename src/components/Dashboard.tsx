@@ -44,48 +44,58 @@ export default function Dashboard({ user }: { user: User }) {
   useEffect(() => {
     if (!user) return;
 
-    // Listener for received payments (to the user's PIX key)
-    const qReceived = query(
-      collection(db, 'payments'),
-      where('receiverId', '==', user.pixKey)
-    );
-    const unsubReceived = onSnapshot(qReceived, (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DBPayment[];
-      // Sort in memory by createdAt descending
-      payments.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-      setReceivedPayments(payments);
-      setLoadingPayments(false);
-    }, (error) => {
-      console.error("Erro ao escutar pagamentos recebidos:", error);
-    });
+    let unsubReceived = () => {};
+    let unsubSent = () => {};
 
-    // Listener for sent payments (by the user's UID)
-    const qSent = query(
-      collection(db, 'payments'),
-      where('senderId', '==', user.uid)
-    );
-    const unsubSent = onSnapshot(qSent, (snapshot) => {
-      const payments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as DBPayment[];
-      // Sort in memory by createdAt descending
-      payments.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
+    if (user.pixKey) {
+      // Listener for received payments (to the user's PIX key)
+      const qReceived = query(
+        collection(db, 'payments'),
+        where('receiverId', '==', user.pixKey)
+      );
+      unsubReceived = onSnapshot(qReceived, (snapshot) => {
+        const payments = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as DBPayment[];
+        // Sort in memory by createdAt descending
+        payments.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        setReceivedPayments(payments);
+        setLoadingPayments(false);
+      }, (error) => {
+        console.error("Erro ao escutar pagamentos recebidos:", error);
+        setLoadingPayments(false);
       });
-      setSentPayments(payments);
-    }, (error) => {
-      console.error("Erro ao escutar pagamentos enviados:", error);
-    });
+    } else {
+      setLoadingPayments(false);
+    }
+
+    if (user.uid) {
+      // Listener for sent payments (by the user's UID)
+      const qSent = query(
+        collection(db, 'payments'),
+        where('senderId', '==', user.uid)
+      );
+      unsubSent = onSnapshot(qSent, (snapshot) => {
+        const payments = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as DBPayment[];
+        // Sort in memory by createdAt descending
+        payments.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        setSentPayments(payments);
+      }, (error) => {
+        console.error("Erro ao escutar pagamentos enviados:", error);
+      });
+    }
 
     return () => {
       unsubReceived();

@@ -12,6 +12,8 @@ interface ProfileProps {
 export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [pixType, setPixType] = useState<PixType>(user.pixType);
   const [pixKey, setPixKey] = useState<string>(user.pixKey);
+  const [whatsapp, setWhatsapp] = useState<string>(user.whatsapp || '');
+  const [allowWhatsappContact, setAllowWhatsappContact] = useState<boolean>(user.allowWhatsappContact !== false);
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,6 +84,18 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
       }
     }
 
+    let cleanWhatsapp = whatsapp.trim().replace(/\D/g, '');
+    if (cleanWhatsapp) {
+      if (cleanWhatsapp.length < 10 || cleanWhatsapp.length > 15) {
+        setErrorMsg('Insira um número de WhatsApp válido com DDD (ex: 11999999999).');
+        setIsSaving(false);
+        return;
+      }
+      if ((cleanWhatsapp.length === 10 || cleanWhatsapp.length === 11) && !cleanWhatsapp.startsWith('55')) {
+        cleanWhatsapp = '55' + cleanWhatsapp;
+      }
+    }
+
     try {
       if (!user.uid) {
         throw new Error('Usuário não identificado.');
@@ -90,24 +104,28 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, {
         pixKey: cleanKey,
-        pixType: pixType
+        pixType: pixType,
+        whatsapp: cleanWhatsapp,
+        allowWhatsappContact: allowWhatsappContact
       });
 
       // Update local and App state
       const updatedUser: User = {
         ...user,
         pixKey: cleanKey,
-        pixType: pixType
+        pixType: pixType,
+        whatsapp: cleanWhatsapp,
+        allowWhatsappContact: allowWhatsappContact
       };
       
       onUserUpdate(updatedUser);
-      setSuccessMsg('Chave PIX atualizada com sucesso!');
+      setSuccessMsg('Perfil e dados de contato atualizados com sucesso!');
       
       // Auto-clear success message after 4s
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      console.error('Erro ao atualizar chave PIX:', err);
-      setErrorMsg(err.message || 'Erro ao atualizar chave PIX no banco de dados.');
+      console.error('Erro ao atualizar perfil:', err);
+      setErrorMsg(err.message || 'Erro ao atualizar dados no banco de dados.');
     } finally {
       setIsSaving(false);
     }
@@ -223,6 +241,39 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
                   }
                   className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white placeholder-slate-500 font-mono"
                 />
+              </div>
+            </div>
+
+            {/* WhatsApp Integration Field */}
+            <div className="pt-4 border-t border-slate-800/60 space-y-4">
+              <h5 className="text-[11px] font-bold text-[#32BCAD] uppercase tracking-widest">Contato de Suporte / Confirmação</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Número do WhatsApp (com DDD)</label>
+                  <input
+                    type="text"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="Ex: 11999999999"
+                    className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white placeholder-slate-500 font-mono"
+                  />
+                  <p className="text-[9px] text-slate-500 mt-1">Insira seu celular completo para receber mensagens diretas de seus doadores solicitando ativação rápida.</p>
+                </div>
+
+                <div className="flex items-center pt-2 sm:pt-6">
+                  <label className="flex items-center gap-2.5 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={allowWhatsappContact}
+                      onChange={(e) => setAllowWhatsappContact(e.target.checked)}
+                      className="rounded bg-slate-800/50 border-slate-700 text-[#32BCAD] focus:ring-0 focus:ring-offset-0 cursor-pointer w-4 h-4"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Habilitar WhatsApp</span>
+                      <span className="text-[9px] text-slate-500">Mostrar botão de contato nas telas de envio</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import Dashboard from './Dashboard';
 import NetworkTree from './NetworkTree';
@@ -6,9 +6,9 @@ import Calculator from './Calculator';
 import Notifications from './Notifications';
 import Profile from './Profile';
 import AdminDashboard from './AdminDashboard';
-import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth } from '../lib/firebase';
+import { auth, requestFCMToken, playDonationChime } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 
 type Tab = 'dashboard' | 'network' | 'calculator' | 'profile' | 'admin';
@@ -16,6 +16,30 @@ type Tab = 'dashboard' | 'network' | 'calculator' | 'profile' | 'admin';
 export default function MainLayout({ user, onUserUpdate }: { user: User; onUserUpdate: (updatedUser: User) => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [fcmEnabled, setFcmEnabled] = useState(false);
+  const [enablingFcm, setEnablingFcm] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setFcmEnabled(true);
+      }
+    }
+  }, []);
+
+  const handleToggleFCM = async () => {
+    setEnablingFcm(true);
+    const token = await requestFCMToken(user.uid || user.id);
+    if (token) {
+      setFcmEnabled(true);
+      playDonationChime();
+    } else {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        setFcmEnabled(true);
+      }
+    }
+    setEnablingFcm(false);
+  };
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -148,9 +172,25 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
               <p className="text-slate-400 text-sm mt-1">Gestão inteligente de doações P2P via PIX</p>
             </div>
             
-            <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-800 py-1.5 px-3 rounded-full">
-              <Activity size={14} className="text-[#32BCAD]" />
-              <span className="text-[11px] font-bold tracking-wider text-slate-300 uppercase">Rede Sincronizada</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleToggleFCM}
+                disabled={enablingFcm}
+                title="Sincronizar Notificações FCM em Tempo Real"
+                className={`flex items-center gap-2 py-1.5 px-3.5 rounded-full border text-[11px] font-bold tracking-wider uppercase transition-all cursor-pointer ${
+                  fcmEnabled 
+                    ? 'bg-[#32BCAD]/10 border-[#32BCAD]/40 text-[#32BCAD]' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                }`}
+              >
+                <Bell size={13} className={fcmEnabled ? "animate-pulse text-[#32BCAD]" : ""} />
+                <span>{enablingFcm ? 'Ativando FCM...' : fcmEnabled ? 'FCM Ativo' : 'Ativar Notificações FCM'}</span>
+              </button>
+
+              <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 py-1.5 px-3 rounded-full">
+                <Activity size={14} className="text-[#32BCAD]" />
+                <span className="text-[11px] font-bold tracking-wider text-slate-300 uppercase">Rede Sincronizada</span>
+              </div>
             </div>
           </header>
 

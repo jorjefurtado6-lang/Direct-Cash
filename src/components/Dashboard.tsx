@@ -3,7 +3,7 @@ import { User } from '../types';
 import { 
   Copy, Link as LinkIcon, QrCode, ArrowDownRight, Wallet, Bug, TrendingUp, 
   Users, ShieldCheck, Activity, FileText, Eye, Upload, X, Clock, AlertTriangle, 
-  Check, CheckSquare, Image as ImageIcon, Loader2
+  Check, CheckSquare, Image as ImageIcon, Loader2, MessageCircle
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
@@ -18,6 +18,8 @@ interface DBPayment {
   receiverId: string;
   receiverName?: string;
   receiverPixKey?: string;
+  receiverWhatsapp?: string;
+  receiverAllowWhatsappContact?: boolean;
   amount: number;
   level: number;
   status: 'pending' | 'pending_verification' | 'verified';
@@ -610,6 +612,21 @@ export default function Dashboard({ user }: { user: User }) {
                             </span>
                           )}
 
+                          {p.status !== 'verified' && p.receiverWhatsapp && p.receiverAllowWhatsappContact !== false && (
+                            <a
+                              href={`https://wa.me/${p.receiverWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                `Olá! Eu sou o(a) ${user.name} e acabei de transferir R$ 10,00 via PIX para você no Direct Cash (Nível ${p.level}). Já enviei o comprovante no sistema. Poderia verificar e aprovar minha conta? Obrigado!`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Notificar recebimento via WhatsApp"
+                              className="p-2 bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg border border-emerald-500/20 hover:border-transparent transition-colors cursor-pointer flex items-center justify-center gap-1 text-xs font-bold px-3"
+                            >
+                              <MessageCircle size={13} />
+                              <span className="hidden sm:inline">Notificar</span>
+                            </a>
+                          )}
+
                           <button
                             onClick={() => setSelectedPayment(p)}
                             className="p-2 bg-slate-800/80 hover:bg-[#32BCAD] text-slate-300 hover:text-slate-900 rounded-lg border border-slate-700/50 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold px-3.5"
@@ -628,16 +645,18 @@ export default function Dashboard({ user }: { user: User }) {
       </div>
 
       {/* Admin / Debug Controls */}
-      <div className="flex justify-end pt-4 border-t border-slate-800/50">
-        <button 
-          onClick={triggerMockDonation}
-          disabled={isSimulating}
-          className="text-[10px] uppercase font-bold tracking-widest bg-slate-900/50 text-slate-500 hover:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
-        >
-          <Bug size={14} />
-          {isSimulating ? 'AGUARDE...' : 'SIMULAR DOAÇÃO ENTRANTE (DEBUG)'}
-        </button>
-      </div>
+      {user.isAdmin && (
+        <div className="flex justify-end pt-4 border-t border-slate-800/50">
+          <button 
+            onClick={triggerMockDonation}
+            disabled={isSimulating}
+            className="text-[10px] uppercase font-bold tracking-widest bg-slate-900/50 text-slate-500 hover:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
+          >
+            <Bug size={14} />
+            {isSimulating ? 'AGUARDE...' : 'SIMULAR DOAÇÃO ENTRANTE (DEBUG)'}
+          </button>
+        </div>
+      )}
 
       {/* Detail Receipt Modal */}
       {selectedPayment && (

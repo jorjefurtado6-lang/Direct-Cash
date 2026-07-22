@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User } from '../types';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { 
   collection, query, onSnapshot, doc, updateDoc, deleteDoc, getDocs, getDoc, where, limit, setDoc, serverTimestamp
 } from 'firebase/firestore';
@@ -57,6 +57,7 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
   const [invitePin, setInvitePin] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
   // Auto-elevate owner/admin and verify administrative Firestore role
   useEffect(() => {
@@ -197,6 +198,8 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
   const [editUserSponsorCode, setEditUserSponsorCode] = useState('');
   const [editUserInviteCode, setEditUserInviteCode] = useState('');
   const [editUserIsAdmin, setEditUserIsAdmin] = useState(false);
+  const [editUserWhatsapp, setEditUserWhatsapp] = useState('');
+  const [editUserAllowWhatsappContact, setEditUserAllowWhatsappContact] = useState(true);
   const [editUserLoading, setEditUserLoading] = useState(false);
   const [editUserError, setEditUserError] = useState<string | null>(null);
 
@@ -209,6 +212,8 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
     setEditUserSponsorCode(user.sponsorCode || '');
     setEditUserInviteCode(user.inviteCode || '');
     setEditUserIsAdmin(user.isAdmin === true);
+    setEditUserWhatsapp(user.whatsapp || '');
+    setEditUserAllowWhatsappContact(user.allowWhatsappContact !== false);
     setEditUserError(null);
   };
 
@@ -223,6 +228,13 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
     setEditUserLoading(true);
     setEditUserError(null);
 
+    let cleanWhatsapp = editUserWhatsapp.trim().replace(/\D/g, '');
+    if (cleanWhatsapp) {
+      if ((cleanWhatsapp.length === 10 || cleanWhatsapp.length === 11) && !cleanWhatsapp.startsWith('55')) {
+        cleanWhatsapp = '55' + cleanWhatsapp;
+      }
+    }
+
     try {
       const userRef = doc(db, 'users', editingUser.id);
       await updateDoc(userRef, {
@@ -232,7 +244,9 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
         isActive: editUserIsActive,
         sponsorCode: editUserSponsorCode.trim() || null,
         inviteCode: editUserInviteCode.trim().toUpperCase() || null,
-        isAdmin: editUserIsAdmin
+        isAdmin: editUserIsAdmin,
+        whatsapp: cleanWhatsapp,
+        allowWhatsappContact: editUserAllowWhatsappContact
       });
 
       setEditingUser(null);
@@ -241,6 +255,26 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
       setEditUserError(`Erro ao salvar alterações: ${err.message || err}`);
     } finally {
       setEditUserLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setAuthError('Por favor, digite seu e-mail administrativo acima para solicitar o link de redefinição/criação de senha.');
+      setResetSuccess(null);
+      return;
+    }
+    setLoginLoading(true);
+    setAuthError(null);
+    setResetSuccess(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSuccess(`E-mail de redefinição de senha enviado com sucesso para: ${email.trim()}. Verifique sua caixa de entrada e pasta de spam.`);
+    } catch (err: any) {
+      console.error("Erro ao enviar redefinição de senha:", err);
+      setAuthError(`Erro ao enviar link de redefinição: ${err.message || err}`);
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -271,10 +305,10 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
       const code = error.code || error.message || '';
       
       if (code.includes('auth/invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
-        return "E-mail ou senha incorretos. Se você usava login do Google com este e-mail anteriormente, registre um e-mail administrativo com senha usando um apelido ou outro e-mail (ex: jorjefurtado6+admin@gmail.com) clicando em 'Criar nova conta de administrador' abaixo.";
+        return "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.";
       }
       if (code.includes('auth/email-already-in-use')) {
-        return "Este e-mail já está sendo utilizado pelo login do Google. Para acessar via e-mail/senha, por favor registre-se com um e-mail alternativo ou use o apelido de e-mail (ex: jorjefurtado6+admin@gmail.com) clicando em 'Criar nova conta de administrador' abaixo.";
+        return "Este e-mail já está sendo utilizado por outra conta de administrador.";
       }
       if (code.includes('auth/weak-password')) {
         return "A senha deve conter no mínimo 6 caracteres.";
@@ -488,6 +522,10 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
     setActionLoading(userId);
     try {
       await deleteDoc(doc(db, 'users', userId));
+      if (editingUser?.id === userId) {
+        setEditingUser(null);
+        setEditUserError(null);
+      }
     } catch (err: any) {
       console.error("Erro ao deletar conta do usuário:", err);
       alert(`Erro ao remover usuário: ${err.message || err}`);
@@ -745,20 +783,6 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
           </p>
         </div>
 
-        {/* Info Box about Google Email clash */}
-        <div className="mb-5 bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] p-4 rounded-xl space-y-1.5">
-          <p className="font-bold flex items-center gap-1.5 text-blue-400">
-            <Info size={14} className="shrink-0 text-blue-400" />
-            Dica para Administradores:
-          </p>
-          <p className="leading-relaxed text-slate-300 text-xs">
-            Se seu e-mail (como <strong className="text-white font-mono">jorjefurtado6@gmail.com</strong>) já está cadastrado via Google, o Firebase impedirá o cadastro direto com senha.
-          </p>
-          <p className="leading-relaxed text-slate-300 text-xs">
-            👉 <strong>Solução Simples:</strong> Registre um apelido usando o símbolo <strong className="text-[#32BCAD] font-bold">+</strong> (ex: <strong className="text-white font-mono bg-slate-950 px-1 py-0.5 rounded border border-slate-800">jorjefurtado6+admin@gmail.com</strong>) clicando abaixo. As notificações ainda irão para o seu e-mail original!
-          </p>
-        </div>
-
         <form onSubmit={handleAuthSubmit} className="space-y-5">
           {/* Email input */}
           <div className="space-y-2">
@@ -841,6 +865,13 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
             </div>
           )}
 
+          {resetSuccess && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs p-4 rounded-xl flex gap-2.5 items-start">
+              <Check size={16} className="shrink-0 mt-0.5 text-emerald-400" />
+              <p className="font-medium leading-relaxed">{resetSuccess}</p>
+            </div>
+          )}
+
           <button 
             type="submit"
             disabled={loginLoading}
@@ -862,12 +893,13 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 flex flex-col items-center gap-3">
           <button
             type="button"
             onClick={() => {
               setIsRegistering(!isRegistering);
               setAuthError(null);
+              setResetSuccess(null);
               setConfirmPassword('');
               setInvitePin('');
             }}
@@ -875,6 +907,17 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
           >
             {isRegistering ? "← Voltar para o Login" : "Criar nova conta de administrador"}
           </button>
+
+          {!isRegistering && (
+            <button
+              type="button"
+              onClick={handlePasswordReset}
+              disabled={loginLoading}
+              className="text-slate-500 hover:text-slate-300 text-[11px] transition-all underline decoration-dotted underline-offset-4"
+            >
+              Definir ou recuperar senha? Enviar link para o e-mail inserido acima
+            </button>
+          )}
         </div>
 
         <div className="mt-8 border-t border-slate-800/80 pt-5 text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold">
@@ -1942,6 +1985,32 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
                   </div>
                 </div>
 
+                {/* WhatsApp Fields */}
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/40">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-widest font-bold block mb-1.5">WhatsApp (com DDD)</label>
+                    <input 
+                      type="text" 
+                      value={editUserWhatsapp}
+                      onChange={(e) => setEditUserWhatsapp(e.target.value)}
+                      placeholder="Ex: 5511999999999" 
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-[#32BCAD] text-xs text-white p-3 rounded-xl outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="flex items-center pt-5">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input 
+                        type="checkbox"
+                        checked={editUserAllowWhatsappContact}
+                        onChange={(e) => setEditUserAllowWhatsappContact(e.target.checked)}
+                        className="rounded bg-slate-950 border-slate-800 text-[#32BCAD] focus:ring-0 cursor-pointer w-4 h-4"
+                      />
+                      <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">Permitir Contato WhatsApp</span>
+                    </label>
+                  </div>
+                </div>
+
                 {/* Account Status */}
                 <div className="bg-slate-950/40 p-4 border border-slate-800/60 rounded-2xl flex items-center justify-between">
                   <div>
@@ -1974,6 +2043,25 @@ export default function AdminDashboard({ currentUser }: { currentUser?: User }) 
                     />
                     <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#32BCAD] peer-checked:after:bg-slate-950"></div>
                   </label>
+                </div>
+
+                {/* Danger Zone: Delete User */}
+                <div className="pt-4 border-t border-slate-800/60">
+                  <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-red-400 block">Zona de Perigo</span>
+                      <span className="text-[9px] text-slate-500 block">Excluir permanentemente este usuário e dados do sistema</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteUserAccount(editingUser.id, editingUser.name)}
+                      disabled={editUserLoading || actionLoading === editingUser.id}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-xs font-bold rounded-xl border border-red-500/20 hover:border-transparent transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                    >
+                      <Trash2 size={13} />
+                      Excluir Usuário
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex gap-2">

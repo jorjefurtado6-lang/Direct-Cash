@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, ShieldCheck, Activity, Users, Lock, ChevronDown, CheckCircle2, Star, UserPlus, QrCode, Key, Share2, Play, Pause, Volume2, VolumeX, Calculator, AlertTriangle, TrendingUp, Menu, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Compliance from './Compliance';
+import Infographic from './Infographic';
 
 // @ts-ignore
 import depo1 from '../depoimentos/depo-1.mp4';
@@ -9,6 +10,8 @@ import depo1 from '../depoimentos/depo-1.mp4';
 import depo2 from '../depoimentos/depo-2-1.mp4';
 // @ts-ignore
 import depo3 from '../depoimentos/depo-3.mp4';
+// @ts-ignore
+import depo4 from '../depoimentos/depo-4.mp4';
 
 const promoVideo = "https://drive.google.com/file/d/1iBFrl4-Si4tZ7iyAOd90H_FeQth-l7Gb/view?usp=sharing";
 
@@ -20,9 +23,11 @@ interface LandingProps {
 export default function Landing({ onStart, onAdminClick }: LandingProps) {
   const [view, setView] = useState<'landing' | 'terms' | 'privacy' | 'legal'>('landing');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const menuItems = [
     { label: 'Como Funciona', href: '#como-funciona' },
+    { label: 'Infográfico', href: '#infografico' },
     { label: 'Simulador', href: '#simulador' },
     { label: 'Legalidade', href: '#legalidade' },
     { label: 'Depoimentos', href: '#depoimentos' },
@@ -219,9 +224,23 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00FF85]/10 border border-[#00FF85]/20 text-[#00FF85] text-xs font-bold tracking-widest uppercase mb-8">
-                  <span className="w-2 h-2 rounded-full bg-[#00FF85] animate-pulse"></span>
-                  Rede P2P Inteligente
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00FF85]/10 border border-[#00FF85]/20 text-[#00FF85] text-xs font-bold tracking-widest uppercase">
+                    <span className="w-2 h-2 rounded-full bg-[#00FF85] animate-pulse"></span>
+                    Rede P2P Inteligente
+                  </div>
+
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowVideoModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold tracking-widest uppercase transition-all duration-300 group hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] cursor-pointer"
+                  >
+                    <Play size={10} className="fill-amber-400 text-amber-400 group-hover:scale-110 transition-transform" />
+                    <span>Assista Apresentação</span>
+                    <span className="text-sm leading-none inline-block group-hover:translate-x-1.5 transition-transform duration-300">➔</span>
+                  </button>
                 </div>
                 
                 <h1 className="text-[51px] font-extrabold text-white tracking-tight leading-[1.1] mb-6">
@@ -246,7 +265,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
             </div>
 
             {/* Right Column: Premium Video Player Mockup */}
-            <div className="lg:col-span-5 w-full">
+            <div id="video-apresentacao" className="lg:col-span-5 w-full scroll-mt-28 transition-all duration-500">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -348,6 +367,9 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
           </div>
         </div>
       </section>
+
+      {/* INFOGRAPHIC SECTION */}
+      <Infographic onStart={onStart} />
 
       {/* PROJECTION SIMULATOR */}
       <section id="simulador" className="py-24 px-6 bg-[#121212] border-t border-white/5 relative overflow-hidden">
@@ -672,11 +694,12 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
             {[
               { src: depo1, title: "Resultados com doações instantâneas", duration: "Membro Ativo" },
               { src: depo2, title: "Ativação simples e rápida via PIX", duration: "Membro Ativo" },
-              { src: depo3, title: "Como o sistema mudou minha perspectiva", duration: "Membro Ativo" }
+              { src: depo3, title: "Como o sistema mudou minha perspectiva", duration: "Membro Ativo" },
+              { src: depo4, title: "Crescimento acelerado em comunidade", duration: "Membro Ativo" }
             ].map((video, idx) => (
               <div key={idx} className="bg-[#121212] rounded-2xl border border-white/5 overflow-hidden group hover:border-[#00FF85]/30 transition-all flex flex-col shadow-2xl">
                 <div className="relative aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
@@ -733,6 +756,15 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                   </div>
                 </div>
               ))}
+            </div>
+            
+            <div className="mt-16 flex justify-center">
+              <button 
+                onClick={onStart}
+                className="bg-[#00FF85] hover:bg-[#00cc6a] text-[#121212] font-bold text-lg px-8 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(0,255,133,0.3)] hover:shadow-[0_0_40px_rgba(0,255,133,0.5)] cursor-pointer flex items-center gap-2"
+              >
+                Ativar Meu Fluxo <ArrowRight size={20} />
+              </button>
             </div>
           </div>
         </div>
@@ -820,6 +852,38 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
           </div>
         </div>
       </footer>
+
+      {showVideoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <button 
+              onClick={() => setShowVideoModal(false)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-[#00FF85] transition-colors cursor-pointer bg-white/5 hover:bg-white/10 rounded-full"
+            >
+              <X size={24} />
+            </button>
+            <div className="bg-black border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative aspect-video flex items-center justify-center">
+              {promoVideo.includes('drive.google.com') ? (
+                <iframe
+                  className="w-full h-full border-0 absolute inset-0"
+                  src={promoVideo.replace('/view?usp=sharing', '/preview').replace('/view', '/preview')}
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              ) : (
+                <video 
+                  src={promoVideo}
+                  controls 
+                  autoPlay 
+                  className="w-full h-full object-contain"
+                  playsInline
+                  controlsList="nodownload"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

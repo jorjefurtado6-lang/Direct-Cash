@@ -29,14 +29,24 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && (
-        resource.data.uid == request.auth.uid ||
-        resource.data.sponsorCode != null ||
-        resource.data.inviteCode != null ||
+      allow list: if isSignedIn();
+      
+      // Prevent standard users from creating themselves as active or admin
+      allow create: if isSignedIn() && (
+        (request.auth.uid == userId && 
+         request.resource.data.isActive == false && 
+         (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == false)) || 
         isAdmin()
       );
-      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      // Prevent standard users from modifying their active status or admin status
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && 
+         request.resource.data.isActive == resource.data.isActive && 
+         (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == resource.data.isAdmin)) || 
+        isAdmin()
+      );
+      
       allow delete: if isAdmin();
     }
 
@@ -53,15 +63,19 @@ service cloud.firestore {
         isAdmin()
       );
       
+      // Only allow standard users to create payments with status 'pending_verification'
       allow create: if isSignedIn() && (
-        request.resource.data.senderId == request.auth.uid || 
+        (request.resource.data.senderId == request.auth.uid && 
+         request.resource.data.status == 'pending_verification') || 
         isAdmin()
       );
       
+      // Users can update their own payments (e.g. upload new receipt) as long as status remains 'pending_verification'
       allow update: if isSignedIn() && (
-        resource.data.senderId == request.auth.uid || 
-        isReceiver() ||
-        isAdmin()
+        isAdmin() || 
+        (resource.data.senderId == request.auth.uid && 
+         request.resource.data.status == 'pending_verification' && 
+         request.resource.data.senderId == resource.data.senderId)
       );
       
       allow delete: if isAdmin();

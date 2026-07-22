@@ -3,6 +3,7 @@ export type PixType = 'cpf' | 'email' | 'telefone' | 'aleatoria';
 export interface User {
   uid?: string;
   name: string;
+  email?: string;
   pixKey: string;
   pixType: PixType;
   isActive: boolean;
@@ -10,6 +11,8 @@ export interface User {
   sponsorCode?: string;
   createdAt?: any;
   isAdmin?: boolean;
+  whatsapp?: string;
+  allowWhatsappContact?: boolean;
 }
 
 export interface Receiver {
@@ -17,4 +20,6 @@ export interface Receiver {
   name: string;
   pixKey: string;
   status: 'pending' | 'uploading' | 'verified';
+  whatsapp?: string;
+  allowWhatsappContact?: boolean;
 }

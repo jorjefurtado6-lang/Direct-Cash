@@ -3,12 +3,15 @@ import { User } from '../types';
 import { 
   Copy, Link as LinkIcon, QrCode, ArrowDownRight, Wallet, Bug, TrendingUp, 
   Users, ShieldCheck, Activity, FileText, Eye, Upload, X, Clock, AlertTriangle, 
-  Check, CheckSquare, Image as ImageIcon, Loader2, MessageCircle
+  Check, CheckSquare, Image as ImageIcon, Loader2, MessageCircle, Share2, Download, Printer, Sparkles
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { generateSimulatedReceiptSvg } from '../lib/receipt';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import WhatsappShareKit from './WhatsappShareKit';
+import PixQrModal from './PixQrModal';
+import { exportToCSV, printStatementReport } from '../utils/exportReport';
 
 interface DBPayment {
   id: string;
@@ -31,6 +34,10 @@ export default function Dashboard({ user }: { user: User }) {
   const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
   const [isSimulating, setIsSimulating] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Modal States for New Features
+  const [showWhatsappKit, setShowWhatsappKit] = useState(false);
+  const [showPixQrModal, setShowPixQrModal] = useState(false);
   
   // Payments State
   const [receivedPayments, setReceivedPayments] = useState<DBPayment[]>([]);
@@ -308,16 +315,19 @@ export default function Dashboard({ user }: { user: User }) {
           {/* Invite Link Card */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-[#32BCAD]/30 rounded-2xl p-6 relative overflow-hidden shadow-[0_8px_30px_rgba(50,188,173,0.05)]">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#32BCAD]/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-            <div className="flex items-center gap-3 mb-5 relative z-10">
-              <div className="p-2.5 bg-[#32BCAD]/10 text-[#32BCAD] rounded-xl border border-[#32BCAD]/20">
-                <LinkIcon size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-white tracking-tight">Link de Expansão</h3>
-                <p className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold">Compartilhe sua rede</p>
+            <div className="flex items-center justify-between mb-5 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-[#32BCAD]/10 text-[#32BCAD] rounded-xl border border-[#32BCAD]/20">
+                  <LinkIcon size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white tracking-tight">Link de Expansão</h3>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold">Compartilhe sua rede</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center bg-slate-950/50 border border-slate-700/50 rounded-xl p-1 relative z-10">
+
+            <div className="flex items-center bg-slate-950/50 border border-slate-700/50 rounded-xl p-1 relative z-10 mb-3">
               <input type="text" readOnly value={inviteLink} className="flex-1 bg-transparent px-3 text-xs text-[#32BCAD] font-mono outline-none w-full" />
               <button 
                 onClick={() => copyToClipboard(inviteLink)} 
@@ -326,19 +336,38 @@ export default function Dashboard({ user }: { user: User }) {
                 {copied ? 'COPIADO!' : <><Copy size={14} /> COPIAR</>}
               </button>
             </div>
+
+            <button
+              onClick={() => setShowWhatsappKit(true)}
+              className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer relative z-10"
+            >
+              <MessageCircle size={15} />
+              Kit de Divulgação WhatsApp
+            </button>
           </div>
 
           {/* My Pix Key Card */}
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="p-2.5 bg-slate-800/80 text-[#32BCAD] rounded-xl border border-slate-700/50">
-                <QrCode size={20} />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-800/80 text-[#32BCAD] rounded-xl border border-slate-700/50">
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white tracking-tight">Carteira de Recebimento</h3>
+                  <p className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold">Chave PIX Ativa</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white tracking-tight">Carteira de Recebimento</h3>
-                <p className="text-slate-400 text-[11px] uppercase tracking-wider font-semibold">Chave PIX Ativa</p>
-              </div>
+
+              <button
+                onClick={() => setShowPixQrModal(true)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <QrCode size={14} className="text-[#32BCAD]" />
+                QR Code
+              </button>
             </div>
+
             <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 flex justify-between items-center relative overflow-hidden">
               <div className="absolute right-0 top-0 h-full w-1 bg-[#32BCAD]"></div>
               <div>
@@ -466,7 +495,7 @@ export default function Dashboard({ user }: { user: User }) {
 
       {/* Proof of Payments & Receipts Section */}
       <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-5">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-5">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-[#32BCAD]/10 text-[#32BCAD] rounded-xl border border-[#32BCAD]/20">
               <FileText size={20} />
@@ -477,23 +506,54 @@ export default function Dashboard({ user }: { user: User }) {
             </div>
           </div>
 
-          {/* Navigation Tab bar */}
-          <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800 w-full sm:w-auto">
-            <button
-              onClick={() => setActiveTab('received')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'received' ? 'bg-[#32BCAD] text-slate-900 shadow-[0_0_10px_rgba(50,188,173,0.15)]' : 'text-slate-400 hover:text-white'}`}
-            >
-              Doações Recebidas
-              {receivedPayments.filter(p => p.status === 'pending_verification').length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('sent')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'sent' ? 'bg-[#32BCAD] text-slate-900 shadow-[0_0_10px_rgba(50,188,173,0.15)]' : 'text-slate-400 hover:text-white'}`}
-            >
-              Doações Enviadas
-            </button>
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+            {/* Export Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportToCSV(
+                  activeTab === 'received' ? receivedPayments : sentPayments,
+                  user.name,
+                  activeTab === 'received' ? 'recebimentos' : 'enviados'
+                )}
+                title="Exportar planilha CSV para Excel"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Download size={13} className="text-[#32BCAD]" />
+                CSV
+              </button>
+
+              <button
+                onClick={() => printStatementReport(
+                  activeTab === 'received' ? receivedPayments : sentPayments,
+                  user.name,
+                  totalEarned
+                )}
+                title="Gerar extrato impresso / PDF"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Printer size={13} className="text-emerald-400" />
+                Imprimir
+              </button>
+            </div>
+
+            {/* Navigation Tab bar */}
+            <div className="flex bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+              <button
+                onClick={() => setActiveTab('received')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'received' ? 'bg-[#32BCAD] text-slate-900 shadow-[0_0_10px_rgba(50,188,173,0.15)]' : 'text-slate-400 hover:text-white'}`}
+              >
+                Doações Recebidas
+                {receivedPayments.filter(p => p.status === 'pending_verification').length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('sent')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'sent' ? 'bg-[#32BCAD] text-slate-900 shadow-[0_0_10px_rgba(50,188,173,0.15)]' : 'text-slate-400 hover:text-white'}`}
+              >
+                Doações Enviadas
+              </button>
+            </div>
           </div>
         </div>
 
@@ -739,6 +799,18 @@ export default function Dashboard({ user }: { user: User }) {
             )}
           </div>
         </div>
+      )}
+
+      {/* WHATSAPP SHARE KIT MODAL */}
+      {showWhatsappKit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <WhatsappShareKit user={user} onClose={() => setShowWhatsappKit(false)} />
+        </div>
+      )}
+
+      {/* PIX QR CODE MODAL */}
+      {showPixQrModal && (
+        <PixQrModal user={user} onClose={() => setShowPixQrModal(false)} />
       )}
     </div>
   );

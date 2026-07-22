@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { User, PixType } from '../types';
 import { db } from '../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { ShieldCheck, Copy, Check, User as UserIcon, AlertCircle, RefreshCw, Smartphone, Mail, Hash, UserCheck } from 'lucide-react';
+import { ShieldCheck, Copy, Check, User as UserIcon, AlertCircle, RefreshCw, Smartphone, Mail, Hash, UserCheck, MessageCircle, QrCode } from 'lucide-react';
+import WhatsappShareKit from './WhatsappShareKit';
+import PixQrModal from './PixQrModal';
 
 interface ProfileProps {
   user: User;
@@ -18,6 +20,10 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Modals state
+  const [showWhatsappKit, setShowWhatsappKit] = useState(false);
+  const [showPixQrModal, setShowPixQrModal] = useState(false);
 
   const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
 
@@ -152,13 +158,29 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <button
+              onClick={() => setShowWhatsappKit(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+              <MessageCircle size={15} />
+              Kit WhatsApp
+            </button>
+
+            <button
+              onClick={() => setShowPixQrModal(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
+            >
+              <QrCode size={15} className="text-[#32BCAD]" />
+              QR Code PIX
+            </button>
+
             {user.inviteCode && (
               <button
                 onClick={() => copyToClipboard(inviteLink)}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all cursor-pointer"
               >
                 {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                {copied ? 'Link Copiado!' : 'Copiar Link de Convite'}
+                {copied ? 'Link Copiado!' : 'Copiar Convite'}
               </button>
             )}
           </div>
@@ -311,6 +333,18 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
           </form>
         </div>
       </div>
+
+      {/* WHATSAPP SHARE KIT MODAL */}
+      {showWhatsappKit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+          <WhatsappShareKit user={user} onClose={() => setShowWhatsappKit(false)} />
+        </div>
+      )}
+
+      {/* PIX QR CODE MODAL */}
+      {showPixQrModal && (
+        <PixQrModal user={user} onClose={() => setShowPixQrModal(false)} />
+      )}
     </div>
   );
 }

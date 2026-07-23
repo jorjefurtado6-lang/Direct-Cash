@@ -3,6 +3,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { User } from '../types';
 import { QrCode, Copy, Check, X, ShieldCheck, Share2 } from 'lucide-react';
 
+import { getInviteLink } from '../utils/constants';
+
 interface PixQrModalProps {
   user: User;
   onClose: () => void;
@@ -12,7 +14,7 @@ export default function PixQrModal({ user, onClose }: PixQrModalProps) {
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
+  const inviteLink = getInviteLink(user.inviteCode);
 
   const copyKey = () => {
     navigator.clipboard.writeText(user.pixKey);

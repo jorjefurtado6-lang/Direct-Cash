@@ -64,7 +64,7 @@ export default function Notifications({ user }: NotificationProps) {
   // Request FCM Permission
   const enableFCM = async () => {
     setFcmStatus('loading');
-    const token = await requestFCMToken(user.uid || user.id);
+    const token = await requestFCMToken(user.uid || (user as any).id);
     if (token) {
       setFcmStatus('granted');
       setToastMsg("Notificações em Tempo Real (FCM) Ativadas!");

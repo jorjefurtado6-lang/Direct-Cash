@@ -3,13 +3,15 @@ import { QRCodeSVG } from 'qrcode.react';
 import { User } from '../types';
 import { Share2, MessageCircle, Copy, Check, QrCode, Sparkles, Send, X, ExternalLink } from 'lucide-react';
 
+import { getInviteLink } from '../utils/constants';
+
 interface WhatsappShareKitProps {
   user: User;
   onClose?: () => void;
 }
 
 export default function WhatsappShareKit({ user, onClose }: WhatsappShareKitProps) {
-  const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
+  const inviteLink = getInviteLink(user.inviteCode);
   const [selectedTemplate, setSelectedTemplate] = useState<number>(0);
   const [copied, setCopied] = useState(false);
 

@@ -12,6 +12,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import WhatsappShareKit from './WhatsappShareKit';
 import PixQrModal from './PixQrModal';
 import { exportToCSV, printStatementReport } from '../utils/exportReport';
+import { getInviteLink } from '../utils/constants';
 
 interface DBPayment {
   id: string;
@@ -31,7 +32,7 @@ interface DBPayment {
 }
 
 export default function Dashboard({ user }: { user: User }) {
-  const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
+  const inviteLink = getInviteLink(user.inviteCode);
   const [isSimulating, setIsSimulating] = useState(false);
   const [copied, setCopied] = useState(false);
   

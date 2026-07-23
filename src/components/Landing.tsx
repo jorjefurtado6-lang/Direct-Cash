@@ -116,6 +116,10 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
     {
       q: 'Como funciona a agilidade do sistema?',
       a: 'Os pagamentos são processados em tempo real, diretamente via PIX P2P (ponto a ponto). Não há retenção de saldo na plataforma, o dinheiro cai imediatamente na sua conta bancária.'
+    },
+    {
+      q: 'Como funciona o suporte para membros ativos?',
+      a: 'Todos os membros ativos possuem acesso exclusivo à assistente inteligente "DirectAI" integrada ao painel de controle (disponível 24h via chat de inteligência artificial), além do canal de atendimento humano via WhatsApp Oficial: (13) 99147-2036.'
     }
   ];
 

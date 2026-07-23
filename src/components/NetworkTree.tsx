@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronRight, HelpCircle, Network
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getInviteLink } from '../utils/constants';
 
 interface NetworkTreeProps {
   user: User;
@@ -29,7 +30,7 @@ export default function NetworkTree({ user }: { user: User }) {
   const [loadingSubTree, setLoadingSubTree] = useState<Record<string, boolean>>({});
   
   const [copiedLink, setCopiedLink] = useState(false);
-  const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
+  const inviteLink = getInviteLink(user.inviteCode);
 
   // Load Sponsor details
   useEffect(() => {

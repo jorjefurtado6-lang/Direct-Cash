@@ -5,6 +5,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { ShieldCheck, Copy, Check, User as UserIcon, AlertCircle, RefreshCw, Smartphone, Mail, Hash, UserCheck, MessageCircle, QrCode } from 'lucide-react';
 import WhatsappShareKit from './WhatsappShareKit';
 import PixQrModal from './PixQrModal';
+import { getInviteLink } from '../utils/constants';
 
 interface ProfileProps {
   user: User;
@@ -25,7 +26,7 @@ export default function Profile({ user, onUserUpdate }: ProfileProps) {
   const [showWhatsappKit, setShowWhatsappKit] = useState(false);
   const [showPixQrModal, setShowPixQrModal] = useState(false);
 
-  const inviteLink = `https://directcash.app/invite/${user.inviteCode}`;
+  const inviteLink = getInviteLink(user.inviteCode);
 
   const getPixTypeLabel = (type: PixType) => {
     switch (type) {

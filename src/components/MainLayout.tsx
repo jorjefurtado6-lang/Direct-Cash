@@ -6,12 +6,13 @@ import Calculator from './Calculator';
 import Notifications from './Notifications';
 import Profile from './Profile';
 import AdminDashboard from './AdminDashboard';
-import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2 } from 'lucide-react';
+import SupportChatbot from './SupportChatbot';
+import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, requestFCMToken, playDonationChime } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 
-type Tab = 'dashboard' | 'network' | 'calculator' | 'profile' | 'admin';
+type Tab = 'dashboard' | 'network' | 'calculator' | 'support' | 'profile' | 'admin';
 
 export default function MainLayout({ user, onUserUpdate }: { user: User; onUserUpdate: (updatedUser: User) => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -29,7 +30,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
 
   const handleToggleFCM = async () => {
     setEnablingFcm(true);
-    const token = await requestFCMToken(user.uid || user.id);
+    const token = await requestFCMToken(user.uid || (user as any).id);
     if (token) {
       setFcmEnabled(true);
       playDonationChime();
@@ -45,6 +46,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'network', label: 'Rede Ativa', icon: Users },
     { id: 'calculator', label: 'Projeções', icon: CalcIcon },
+    { id: 'support', label: 'Suporte IA', icon: Bot },
     { id: 'profile', label: 'Meu Perfil', icon: UserIcon },
     { id: 'admin', label: 'Painel Admin', icon: Shield },
   ] as const;
@@ -205,6 +207,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
               {activeTab === 'dashboard' && <Dashboard user={user} />}
               {activeTab === 'network' && <NetworkTree user={user} />}
               {activeTab === 'calculator' && <Calculator />}
+              {activeTab === 'support' && <SupportChatbot user={user} isWidgetMode={false} isOpenDefault={true} />}
               {activeTab === 'profile' && <Profile user={user} onUserUpdate={onUserUpdate} />}
               {activeTab === 'admin' && <AdminDashboard currentUser={user} />}
             </motion.div>
@@ -222,6 +225,11 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
           <p>© {new Date().getFullYear()} Direct Cash Pix • Tecnologia Segura de Ponta a Ponta</p>
         </footer>
       </main>
+
+      {/* Floating Chatbot Widget for Active Members */}
+      {activeTab !== 'support' && (
+        <SupportChatbot user={user} isWidgetMode={true} />
+      )}
     </div>
   );
 }

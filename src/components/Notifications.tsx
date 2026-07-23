@@ -131,6 +131,8 @@ export default function Notifications({ user }: NotificationProps) {
 
       previousIdsRef.current = currentIds;
       setNotifications(newNotifications);
+    }, (error) => {
+      console.warn("Erro no listener de notificações:", error);
     });
 
     return () => unsubscribe();

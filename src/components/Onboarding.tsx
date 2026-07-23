@@ -3,7 +3,7 @@ import { User, Receiver, PixType } from '../types';
 import { LOGO_IMAGE_URL } from '../assets/logo';
 import { CheckCircle, Upload, ArrowRight, ShieldCheck, QrCode, AlertCircle, Loader2, Copy, Image as ImageIcon, Hourglass, LogOut, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, collection, addDoc, query, where, limit, getDocs, onSnapshot } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -34,6 +34,8 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
 
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSavingPixKey, setIsSavingPixKey] = useState(false);
+  const [isEditingPix, setIsEditingPix] = useState(false);
 
   // Real flow states
   const [receiptsMap, setReceiptsMap] = useState<{[level: number]: string}>({});
@@ -41,6 +43,22 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
   const [checkingExistingPayments, setCheckingExistingPayments] = useState(true);
   const [hasPendingPayments, setHasPendingPayments] = useState(false);
   const [userPayments, setUserPayments] = useState<any[]>([]);
+
+  // Sync initial user into form data
+  useEffect(() => {
+    if (initialUser) {
+      setFormData(prev => ({
+        ...prev,
+        name: initialUser.name || prev.name,
+        email: initialUser.email || prev.email,
+        pixKey: initialUser.pixKey || prev.pixKey,
+        pixType: initialUser.pixType || prev.pixType,
+        sponsorCode: initialUser.sponsorCode || prev.sponsorCode,
+        uid: initialUser.uid || prev.uid
+      }));
+      setStep(2);
+    }
+  }, [initialUser]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeUploadLevel, setActiveUploadLevel] = useState<number | null>(null);
@@ -107,6 +125,8 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
           onComplete({ ...userData, uid });
         }
       }
+    }, (error) => {
+      console.warn("Erro ao escutar dados do usuário:", error);
     });
 
     return () => unsubscribe();
@@ -121,6 +141,8 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUserPayments(list);
+    }, (error) => {
+      console.warn("Erro ao escutar pagamentos do usuário:", error);
     });
 
     return () => unsubscribe();
@@ -310,10 +332,37 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
     }
   };
 
+  const handleSavePixKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.pixKey || !formData.pixKey.trim()) {
+      setErrorMsg("Por favor, informe a sua chave PIX para continuar.");
+      return;
+    }
+    setIsSavingPixKey(true);
+    setErrorMsg(null);
+    try {
+      const uid = auth.currentUser?.uid || initialUser?.uid || formData.uid;
+      if (uid) {
+        const userRef = doc(db, 'users', uid);
+        await setDoc(userRef, {
+          pixKey: formData.pixKey.trim(),
+          pixType: formData.pixType
+        }, { merge: true });
+        setFormData(prev => ({ ...prev, pixKey: formData.pixKey.trim() }));
+      }
+      setIsEditingPix(false);
+    } catch (err: any) {
+      console.error("Error saving PIX key:", err);
+      setErrorMsg("Erro ao salvar chave PIX. Por favor, tente novamente.");
+    } finally {
+      setIsSavingPixKey(false);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.pixKey || !formData.email || !formData.password) {
-      setErrorMsg("Por favor, preencha todos os campos obrigatórios.");
+    if (!formData.name || !formData.email || !formData.password) {
+      setErrorMsg("Por favor, preencha todos os campos obrigatórios (Nome, E-mail e Senha).");
       return;
     }
     if (formData.password.length < 6) {
@@ -342,8 +391,8 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
               name: userData.name,
               email: userData.email || formData.email,
               password: '',
-              pixKey: userData.pixKey,
-              pixType: userData.pixType,
+              pixKey: userData.pixKey || '',
+              pixType: userData.pixType || 'cpf',
               sponsorCode: userData.sponsorCode || '',
               uid: uid
             });
@@ -355,10 +404,10 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
         const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
         
         const newUser: User = {
-          name: formData.name,
+          name: formData.name.trim(),
           email: formData.email.trim(),
-          pixKey: formData.pixKey,
-          pixType: formData.pixType,
+          pixKey: '',
+          pixType: 'cpf',
           uid,
           isActive: false,
           isAdmin: false,
@@ -368,7 +417,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
         };
         
         await setDoc(docRef, newUser);
-        setFormData(prev => ({ ...prev, uid }));
+        setFormData(prev => ({ ...prev, uid, pixKey: '', pixType: 'cpf' }));
       }
       setStep(2);
     } catch (error: any) {
@@ -504,7 +553,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
       <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_right,_#1e293b_0%,_#020617_40%)]">
         <div className="w-full max-w-md">
           <div className="text-center mb-6 flex flex-col items-center animate-pulse">
-            <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
+            <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="h-16 w-auto max-w-[220px] rounded-2xl object-contain mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" referrerPolicy="no-referrer" />
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/60 border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden">
@@ -596,7 +645,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
+          <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="h-16 w-auto max-w-[220px] rounded-2xl object-contain mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" referrerPolicy="no-referrer" />
         </div>
 
         {step === 1 ? (
@@ -678,7 +727,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
                 className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 relative overflow-hidden"
               >
                 <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 text-white">
-                  <ShieldCheck className="text-[#32BCAD]" /> Cadastro Seguro
+                  <ShieldCheck className="text-[#32BCAD]" /> Criar Conta
                 </h2>
                 <form onSubmit={handleRegister} className="space-y-4 relative z-10">
                   <div>
@@ -686,31 +735,14 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
                     <input required type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="Seu nome completo" />
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">E-mail</label>
-                      <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="exemplo@email.com" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Senha</label>
-                      <input required type="password" minLength={6} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="Mín. 6 caracteres" />
-                    </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">E-mail</label>
+                    <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="exemplo@email.com" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Chave</label>
-                      <select value={formData.pixType} onChange={e => setFormData({ ...formData, pixType: e.target.value as PixType })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white appearance-none">
-                        <option value="cpf">CPF</option>
-                        <option value="email">E-mail</option>
-                        <option value="telefone">Telefone</option>
-                        <option value="aleatoria">Aleatória</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Chave PIX</label>
-                      <input required type="text" value={formData.pixKey} onChange={e => setFormData({ ...formData, pixKey: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="Sua chave PIX" />
-                    </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Senha</label>
+                    <input required type="password" minLength={6} value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" placeholder="Mínimo 6 caracteres" />
                   </div>
 
                   <div>
@@ -729,7 +761,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
                     {isRegistering ? (
                       <><Loader2 size={16} className="animate-spin" /> Cadastrando...</>
                     ) : (
-                      <>Continuar para Ativação <ArrowRight size={16} /></>
+                      <>Criar Conta e Acessar Escritório <ArrowRight size={16} /></>
                     )}
                   </button>
 
@@ -750,8 +782,86 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
               </motion.div>
             )}
           </AnimatePresence>
+        ) : (!formData.pixKey || formData.pixKey.trim() === '' || isEditingPix) ? (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900/60 border border-[#32BCAD]/30 rounded-2xl p-6 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#32BCAD] bg-[#32BCAD]/10 border border-[#32BCAD]/20 px-3 py-1 rounded-full">
+                Passo 1 de 2: Configurar Chave PIX
+              </span>
+              {isEditingPix && formData.pixKey && (
+                <button 
+                  onClick={() => setIsEditingPix(false)}
+                  className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+
+            <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-white">
+              <QrCode className="text-[#32BCAD]" size={20} /> Cadastre sua Chave PIX
+            </h2>
+            <p className="text-slate-400 text-xs mb-6 leading-relaxed">
+              Para receber doações diretas na sua conta bancária assim que sua conta for ativada, informe a sua chave PIX principal.
+            </p>
+
+            <form onSubmit={handleSavePixKey} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Chave PIX</label>
+                <select value={formData.pixType} onChange={e => setFormData({ ...formData, pixType: e.target.value as PixType })} className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white appearance-none">
+                  <option value="cpf">CPF</option>
+                  <option value="email">E-mail</option>
+                  <option value="telefone">Telefone</option>
+                  <option value="aleatoria">Chave Aleatória</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Sua Chave PIX</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={formData.pixKey} 
+                  onChange={e => setFormData({ ...formData, pixKey: e.target.value })} 
+                  className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-[#32BCAD] transition-colors text-white" 
+                  placeholder="Digite sua chave PIX aqui" 
+                />
+              </div>
+
+              {errorMsg && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-xs font-medium">
+                  {errorMsg}
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={isSavingPixKey} 
+                className="w-full bg-[#32BCAD] hover:bg-[#269689] disabled:bg-slate-850 disabled:text-slate-500 text-slate-900 font-bold tracking-widest uppercase text-xs rounded-xl px-4 py-4 mt-6 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_15px_rgba(50,188,173,0.3)]"
+              >
+                {isSavingPixKey ? (
+                  <><Loader2 size={16} className="animate-spin" /> Salvando...</>
+                ) : (
+                  <>Salvar Chave e Avancar para Ativação <ArrowRight size={16} /></>
+                )}
+              </button>
+            </form>
+          </motion.div>
         ) : (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900/60 border border-[#32BCAD]/30 rounded-2xl p-6 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-4 p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Sua Chave PIX de Recebimento</span>
+                <span className="text-xs font-mono font-bold text-white truncate max-w-[200px]">{formData.pixKey} ({formData.pixType.toUpperCase()})</span>
+              </div>
+              <button 
+                onClick={() => setIsEditingPix(true)} 
+                className="text-xs text-[#32BCAD] hover:underline font-semibold cursor-pointer"
+              >
+                Alterar
+              </button>
+            </div>
+
             <div className="absolute top-0 right-0 p-4">
               <span className="flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#32BCAD] opacity-75"></span>
@@ -759,7 +869,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
               </span>
             </div>
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
-              Ativação de Conta
+              Passo 2 de 2: Ativação de Conta
             </h2>
             <p className="text-slate-400 text-xs mb-6 leading-normal">Transfira exatamente R$ 10,00 para cada membro abaixo e anexe fotos reais dos comprovantes de transferência.</p>
             

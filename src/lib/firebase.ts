@@ -1,21 +1,26 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { initializeFirestore, doc, updateDoc, getDocFromServer } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getMessaging, isSupported, getToken, onMessage, Messaging } from 'firebase/messaging';
-
-const firebaseConfig = {
-  projectId: "gen-lang-client-0592504740",
-  appId: "1:438859432767:web:5778b18c152a712088498a",
-  apiKey: "AIzaSyCjgnOJfuUuI_kuWyRXawThnRfadi2trKk",
-  authDomain: "gen-lang-client-0592504740.firebaseapp.com",
-  storageBucket: "gen-lang-client-0592504740.firebasestorage.app",
-  messagingSenderId: "438859432767",
-  measurementId: ""
-};
+import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, "ai-studio-ajudamtuapix-bc742172-756d-4a56-a39e-e287dc3ec2a4");
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+}, firebaseConfig.firestoreDatabaseId || "ai-studio-ajudamtuapix-bc742172-756d-4a56-a39e-e287dc3ec2a4");
 export const auth = getAuth(app);
+
+// Test connection and log warning if offline without breaking execution
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Firestore está operando em modo offline/cache.");
+    }
+  }
+}
+testConnection();
 
 // FCM Messaging Instance
 let messagingInstance: Messaging | null = null;

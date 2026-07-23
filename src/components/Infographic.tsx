@@ -13,7 +13,8 @@ import {
   Layers, 
   Sparkles,
   ArrowDown,
-  PieChart
+  PieChart,
+  RefreshCw
 } from 'lucide-react';
 
 interface InfographicProps {
@@ -91,7 +92,7 @@ export default function Infographic({ onStart }: InfographicProps) {
             Sistema Ajuda Mútua
           </h2>
           <p className="text-slate-300 max-w-3xl mx-auto text-base sm:text-lg leading-relaxed">
-            Entenda graficamente como um investimento inicial único de <span className="text-[#00FF85] font-bold">R$ 50,00</span> pode se transformar em mais de <span className="text-[#00FF85] font-bold">R$ 39.000,00</span> através da duplicação direta na rede.
+            Entenda graficamente como uma doação inicial única de <span className="text-[#00FF85] font-bold">R$ 50,00</span> pode se transformar em mais de <span className="text-[#00FF85] font-bold">R$ 39.000,00</span> através da duplicação na rede. Mesmo que em média as pessoas da sua rede indiquem 2 ou 3 pessoas ativas, o sistema ainda continua gerando retornos.
           </p>
         </div>
 
@@ -284,8 +285,8 @@ export default function Infographic({ onStart }: InfographicProps) {
         </div>
 
         {/* STEP 3: POR QUE PARTICIPAR (BENEFITS) */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
-          <div className="bg-[#121212] border border-white/10 rounded-2xl p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
+          <div className="bg-[#121212] border border-white/10 rounded-2xl p-6 sm:p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
             <div className="w-12 h-12 rounded-xl bg-[#00FF85]/10 border border-[#00FF85]/30 flex items-center justify-center text-[#00FF85] shrink-0">
               <ShieldCheck size={26} />
             </div>
@@ -297,7 +298,7 @@ export default function Infographic({ onStart }: InfographicProps) {
             </div>
           </div>
 
-          <div className="bg-[#121212] border border-white/10 rounded-2xl p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
+          <div className="bg-[#121212] border border-white/10 rounded-2xl p-6 sm:p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
             <div className="w-12 h-12 rounded-xl bg-[#00FF85]/10 border border-[#00FF85]/30 flex items-center justify-center text-[#00FF85] shrink-0">
               <CheckCircle2 size={26} />
             </div>
@@ -305,6 +306,18 @@ export default function Infographic({ onStart }: InfographicProps) {
               <h4 className="text-xl font-bold text-white mb-2">Negócio 100% Sem Intermediários</h4>
               <p className="text-slate-400 text-sm leading-relaxed">
                 O sistema opera de pessoa para pessoa (P2P). O dinheiro nunca fica retido na plataforma, circulando diretamente entre as contas bancárias dos participantes.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-[#121212] border border-white/10 rounded-2xl p-6 sm:p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
+            <div className="w-12 h-12 rounded-xl bg-[#00FF85]/10 border border-[#00FF85]/30 flex items-center justify-center text-[#00FF85] shrink-0">
+              <RefreshCw size={26} />
+            </div>
+            <div>
+              <h4 className="text-xl font-bold text-white mb-2">Resiliência do Sistema</h4>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Se alguém na sua rede parar, o sistema comprime automaticamente e busca o próximo membro ativo garantindo que o sistema não quebre.
               </p>
             </div>
           </div>

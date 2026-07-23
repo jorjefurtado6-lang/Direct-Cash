@@ -49,7 +49,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#020617] text-slate-200">
         <div className="p-4 border-b border-slate-800 bg-[#090e1a] flex justify-between items-center">
-          <img src={LOGO_IMAGE_URL} alt="Logo" className="h-10 w-auto rounded-lg" />
+          <img src={LOGO_IMAGE_URL} alt="Logo" className="h-10 w-auto rounded-lg object-contain" referrerPolicy="no-referrer" />
           <button 
             onClick={() => setIsAdminMode(false)}
             className="text-xs font-bold text-slate-400 hover:text-white bg-slate-850 px-4 py-2 rounded-xl border border-slate-800 hover:bg-slate-800 transition-all cursor-pointer"

@@ -59,8 +59,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
           <img 
             src={LOGO_IMAGE_URL} 
             alt="Logo" 
-            className="w-52 h-auto rounded-xl object-cover shadow-[0_0_15px_rgba(50,188,173,0.2)]" 
-            style={!isMobile ? { height: '63.846999999999994px' } : undefined}
+            className="h-14 w-auto max-w-[200px] rounded-xl object-contain shadow-[0_0_15px_rgba(50,188,173,0.2)]" 
             referrerPolicy="no-referrer" 
           />
         </div>
@@ -129,7 +128,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-[#090e1a] border-b border-slate-800 relative z-20">
         <div className="flex items-center gap-3">
-          <img src={LOGO_IMAGE_URL} alt="Logo" className="w-[180px] h-auto rounded-lg object-cover" referrerPolicy="no-referrer" />
+          <img src={LOGO_IMAGE_URL} alt="Logo" className="h-10 w-auto max-w-[180px] rounded-lg object-contain" referrerPolicy="no-referrer" />
         </div>
         <button onClick={() => setMobileMenuOpen(true)} className="text-slate-300 p-1">
           <Menu size={24} />

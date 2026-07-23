@@ -9,6 +9,7 @@ import Landing from './components/Landing';
 import Onboarding from './components/Onboarding';
 import MainLayout from './components/MainLayout';
 import AdminDashboard from './components/AdminDashboard';
+import { LOGO_IMAGE_URL } from './assets/logo';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -48,7 +49,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#020617] text-slate-200">
         <div className="p-4 border-b border-slate-800 bg-[#090e1a] flex justify-between items-center">
-          <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Logo" className="h-10 w-auto rounded-lg" />
+          <img src={LOGO_IMAGE_URL} alt="Logo" className="h-10 w-auto rounded-lg" />
           <button 
             onClick={() => setIsAdminMode(false)}
             className="text-xs font-bold text-slate-400 hover:text-white bg-slate-850 px-4 py-2 rounded-xl border border-slate-800 hover:bg-slate-800 transition-all cursor-pointer"

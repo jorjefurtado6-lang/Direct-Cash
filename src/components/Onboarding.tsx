@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { User, Receiver, PixType } from '../types';
+import { LOGO_IMAGE_URL } from '../assets/logo';
 import { CheckCircle, Upload, ArrowRight, ShieldCheck, QrCode, AlertCircle, Loader2, Copy, Image as ImageIcon, Hourglass, LogOut, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, db } from '../lib/firebase';
@@ -503,7 +504,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
       <div className="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_right,_#1e293b_0%,_#020617_40%)]">
         <div className="w-full max-w-md">
           <div className="text-center mb-6 flex flex-col items-center animate-pulse">
-            <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
+            <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
           </div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900/60 border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden">
@@ -595,7 +596,7 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8 flex flex-col items-center">
-          <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
+          <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix Logo" className="w-52 h-auto rounded-3xl object-cover mb-4 shadow-[0_0_30px_rgba(50,188,173,0.3)]" style={{ height: '70.438px' }} referrerPolicy="no-referrer" />
         </div>
 
         {step === 1 ? (

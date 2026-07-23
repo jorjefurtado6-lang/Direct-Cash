@@ -3,6 +3,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db, requestFCMToken, getMessagingInstance, playDonationChime } from '../lib/firebase';
 import { onMessage } from 'firebase/messaging';
 import { User } from '../types';
+import { LOGO_IMAGE_URL } from '../assets/logo';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, CheckCircle, X, DollarSign, Volume2, ShieldCheck, Sparkles, Loader2 } from 'lucide-react';
 
@@ -44,10 +45,10 @@ export default function Notifications({ user }: NotificationProps) {
           
           if (Notification.permission === 'granted') {
             try {
-              new Notification(title, {
-                body,
-                icon: '/src/assets/images/direct_cash_pix_logo_1784486102011.jpg'
-              });
+                new Notification(title, {
+                  body,
+                  icon: LOGO_IMAGE_URL
+                });
             } catch (e) {
               console.log("Error displaying native notification:", e);
             }
@@ -116,7 +117,7 @@ export default function Notifications({ user }: NotificationProps) {
                 const notifData = newNotifications.find(n => n.id === id);
                 new Notification("🎉 Nova Doação PIX Recebida!", {
                   body: `R$ ${(notifData?.amount || 50).toFixed(2)} recebidos via PIX. Clique para confirmar!`,
-                  icon: '/src/assets/images/direct_cash_pix_logo_1784486102011.jpg'
+                  icon: LOGO_IMAGE_URL
                 });
               } catch (err) {
                 console.log("Native Notification error:", err);

@@ -3,6 +3,7 @@ import { ArrowRight, ShieldCheck, Activity, Users, Lock, ChevronDown, CheckCircl
 import { motion } from 'motion/react';
 import Compliance from './Compliance';
 import Infographic from './Infographic';
+import { LOGO_IMAGE_URL } from '../assets/logo';
 
 // @ts-ignore
 import depo1 from '../depoimentos/depo-1.mp4';
@@ -129,7 +130,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
         <header className="fixed top-0 inset-x-0 bg-[#121212]/90 backdrop-blur-md z-50 border-b border-[#00FF85]/10">
           <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')}>
-              <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Direct Cash Pix" className="w-[179px] h-[52px] rounded-xl object-cover" referrerPolicy="no-referrer" />
+              <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix" className="w-[179px] h-[52px] rounded-xl object-cover" referrerPolicy="no-referrer" />
             </div>
           </div>
         </header>
@@ -144,7 +145,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
       <header className="fixed top-0 inset-x-0 bg-[#121212]/90 backdrop-blur-md z-50 border-b border-[#00FF85]/10">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Direct Cash Pix" className="w-[179px] h-[52px] rounded-xl object-cover" referrerPolicy="no-referrer" />
+            <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix" className="w-[179px] h-[52px] rounded-xl object-cover" referrerPolicy="no-referrer" />
           </div>
 
           {/* Desktop Navigation */}
@@ -807,7 +808,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
           <div className="grid md:grid-cols-2 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Direct Cash Pix" className="w-48 h-auto rounded-xl object-cover opacity-90" style={{ height: '103.722px' }} referrerPolicy="no-referrer" />
+                <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix" className="w-48 h-auto rounded-xl object-cover opacity-90" style={{ height: '103.722px' }} referrerPolicy="no-referrer" />
               </div>
               <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
                 Plataforma de tecnologia descentralizada de direcionamento PIX. Não somos instituição financeira.

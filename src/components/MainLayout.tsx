@@ -7,6 +7,7 @@ import Notifications from './Notifications';
 import Profile from './Profile';
 import AdminDashboard from './AdminDashboard';
 import SupportChatbot from './SupportChatbot';
+import { LOGO_IMAGE_URL } from '../assets/logo';
 import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, requestFCMToken, playDonationChime } from '../lib/firebase';
@@ -56,7 +57,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
       <div className="px-6 flex items-center justify-between gap-4 mt-2">
         <div className="flex items-center gap-3">
           <img 
-            src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" 
+            src={LOGO_IMAGE_URL} 
             alt="Logo" 
             className="w-52 h-auto rounded-xl object-cover shadow-[0_0_15px_rgba(50,188,173,0.2)]" 
             style={!isMobile ? { height: '63.846999999999994px' } : undefined}
@@ -128,7 +129,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-[#090e1a] border-b border-slate-800 relative z-20">
         <div className="flex items-center gap-3">
-          <img src="/src/assets/images/direct_cash_pix_logo_1784486102011.jpg" alt="Logo" className="w-[180px] h-auto rounded-lg object-cover" referrerPolicy="no-referrer" />
+          <img src={LOGO_IMAGE_URL} alt="Logo" className="w-[180px] h-auto rounded-lg object-cover" referrerPolicy="no-referrer" />
         </div>
         <button onClick={() => setMobileMenuOpen(true)} className="text-slate-300 p-1">
           <Menu size={24} />

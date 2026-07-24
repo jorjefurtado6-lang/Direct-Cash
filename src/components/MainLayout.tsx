@@ -7,8 +7,10 @@ import Notifications from './Notifications';
 import Profile from './Profile';
 import AdminDashboard from './AdminDashboard';
 import SupportChatbot from './SupportChatbot';
+import QuickGuideOverlay from './QuickGuideOverlay';
+import SecurityTipsModal from './SecurityTipsModal';
 import { LOGO_IMAGE_URL } from '../assets/logo';
-import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2, Bot } from 'lucide-react';
+import { LayoutDashboard, Users, Calculator as CalcIcon, QrCode, Shield, Activity, Menu, X, LogOut, User as UserIcon, Bell, Volume2, Bot, HelpCircle, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, requestFCMToken, playDonationChime } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -20,12 +22,20 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [fcmEnabled, setFcmEnabled] = useState(false);
   const [enablingFcm, setEnablingFcm] = useState(false);
+  const [showQuickGuide, setShowQuickGuide] = useState(false);
+  const [showSecurityTips, setShowSecurityTips] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'granted') {
         setFcmEnabled(true);
       }
+    }
+
+    // Auto open quick guide on first login if not seen yet
+    const guideSeen = localStorage.getItem('direct_cash_quick_guide_seen');
+    if (guideSeen !== 'true') {
+      setShowQuickGuide(true);
     }
   }, []);
 
@@ -176,6 +186,15 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
             
             <div className="flex items-center gap-3">
               <button
+                onClick={() => setShowQuickGuide(true)}
+                title="Abrir Guia Rápido do Sistema"
+                className="flex items-center gap-2 py-1.5 px-3.5 rounded-full border text-[11px] font-bold tracking-wider uppercase transition-all cursor-pointer bg-[#32BCAD]/10 border-[#32BCAD]/40 text-[#32BCAD] hover:bg-[#32BCAD]/20"
+              >
+                <HelpCircle size={13} />
+                <span>Guia Rápido</span>
+              </button>
+
+              <button
                 onClick={handleToggleFCM}
                 disabled={enablingFcm}
                 title="Sincronizar Notificações FCM em Tempo Real"
@@ -204,7 +223,7 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              {activeTab === 'dashboard' && <Dashboard user={user} />}
+              {activeTab === 'dashboard' && <Dashboard user={user} onOpenQuickGuide={() => setShowQuickGuide(true)} />}
               {activeTab === 'network' && <NetworkTree user={user} />}
               {activeTab === 'calculator' && <Calculator />}
               {activeTab === 'support' && <SupportChatbot user={user} isWidgetMode={false} isOpenDefault={true} />}
@@ -215,12 +234,21 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
         </div>
 
         <footer className="max-w-6xl mx-auto w-full mt-12 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-500 gap-3 border-t border-slate-800/50 pt-6 relative z-10">
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <span className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
               SISTEMA OPERACIONAL
             </span>
             <span>VERIFICAÇÃO P2P ATIVA</span>
+
+            <button
+              onClick={() => setShowSecurityTips(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold transition-all cursor-pointer text-[10px] uppercase tracking-wider"
+              title="Abrir Dicas de Segurança e Antifraude PIX"
+            >
+              <ShieldAlert size={12} />
+              <span>Dicas de Segurança</span>
+            </button>
           </div>
           <p>© {new Date().getFullYear()} Direct Cash Pix • Tecnologia Segura de Ponta a Ponta</p>
         </footer>
@@ -230,6 +258,19 @@ export default function MainLayout({ user, onUserUpdate }: { user: User; onUserU
       {activeTab !== 'support' && (
         <SupportChatbot user={user} isWidgetMode={true} />
       )}
+
+      {/* Quick Guide Overlay for First-time and On-demand Users */}
+      <QuickGuideOverlay 
+        isOpen={showQuickGuide} 
+        onClose={() => setShowQuickGuide(false)} 
+        userName={user.name} 
+      />
+
+      {/* Security Tips Modal */}
+      <SecurityTipsModal
+        isOpen={showSecurityTips}
+        onClose={() => setShowSecurityTips(false)}
+      />
     </div>
   );
 }

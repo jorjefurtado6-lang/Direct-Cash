@@ -3,7 +3,7 @@ import { User } from '../types';
 import { 
   Copy, Link as LinkIcon, QrCode, ArrowDownRight, Wallet, Bug, TrendingUp, 
   Users, ShieldCheck, Activity, FileText, Eye, Upload, X, Clock, AlertTriangle, 
-  Check, CheckSquare, Image as ImageIcon, Loader2, MessageCircle, Share2, Download, Printer, Sparkles
+  Check, CheckSquare, Image as ImageIcon, Loader2, MessageCircle, Share2, Download, Printer, Sparkles, HelpCircle
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
@@ -31,7 +31,7 @@ interface DBPayment {
   createdAt?: any;
 }
 
-export default function Dashboard({ user }: { user: User }) {
+export default function Dashboard({ user, onOpenQuickGuide }: { user: User; onOpenQuickGuide?: () => void }) {
   const inviteLink = getInviteLink(user.inviteCode);
   const [isSimulating, setIsSimulating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -338,13 +338,25 @@ export default function Dashboard({ user }: { user: User }) {
               </button>
             </div>
 
-            <button
-              onClick={() => setShowWhatsappKit(true)}
-              className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer relative z-10"
-            >
-              <MessageCircle size={15} />
-              Kit de Divulgação WhatsApp
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 relative z-10">
+              <button
+                onClick={() => setShowWhatsappKit(true)}
+                className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <MessageCircle size={15} />
+                Kit WhatsApp
+              </button>
+              {onOpenQuickGuide && (
+                <button
+                  onClick={onOpenQuickGuide}
+                  className="bg-[#32BCAD]/10 hover:bg-[#32BCAD]/20 text-[#32BCAD] border border-[#32BCAD]/30 font-bold text-xs px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  title="Abrir Guia Rápido do Sistema"
+                >
+                  <HelpCircle size={15} />
+                  Guia Rápido
+                </button>
+              )}
+            </div>
           </div>
 
           {/* My Pix Key Card */}

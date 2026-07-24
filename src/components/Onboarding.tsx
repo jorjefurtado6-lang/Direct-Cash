@@ -871,7 +871,9 @@ export default function Onboarding({ onComplete, initialUser }: OnboardingProps)
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white">
               Passo 2 de 2: Ativação de Conta
             </h2>
-            <p className="text-slate-400 text-xs mb-6 leading-normal">Transfira exatamente R$ 10,00 para cada membro abaixo e anexe fotos reais dos comprovantes de transferência.</p>
+            <p className="text-slate-400 text-xs mb-6 leading-normal">
+              Transfira exatamente R$ 10,00 para cada membro abaixo e anexe fotos reais dos comprovantes de transferência. Dentro do seu escritório virtual você terá acesso imediato aos membros da sua rede para distribuir seu aporte de 50 reais de forma direta ativando o sue cadastro em poucos minutos.
+            </p>
             
             {loadingReceivers ? (
               <div className="py-20 flex flex-col items-center justify-center gap-3">

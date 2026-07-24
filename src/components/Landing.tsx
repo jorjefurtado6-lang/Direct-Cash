@@ -56,6 +56,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
   // Projection Simulator States
   const [directReferrals, setDirectReferrals] = useState(5);
   const [duplicationRate, setDuplicationRate] = useState(5);
+  const [retentionRate, setRetentionRate] = useState(70); // Calibração de Realismo Matemático (70% de ativação / 30% de atrito)
 
   const level1Count = directReferrals;
   const level2Count = level1Count * duplicationRate;
@@ -69,8 +70,19 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
   const level4Total = level4Count * 10;
   const level5Total = level5Count * 10;
 
-  const totalDonations = level1Total + level2Total + level3Total + level4Total + level5Total;
-  const totalMembros = level1Count + level2Count + level3Count + level4Count + level5Count;
+  const totalDonationsTheoretical = level1Total + level2Total + level3Total + level4Total + level5Total;
+  const totalMembrosTheoretical = level1Count + level2Count + level3Count + level4Count + level5Count;
+
+  // Real-world calibrated values factoring in market friction & churn
+  const factor = retentionRate / 100;
+  const level1Calibrated = Math.round(level1Count * factor);
+  const level2Calibrated = Math.round(level2Count * Math.pow(factor, 2));
+  const level3Calibrated = Math.round(level3Count * Math.pow(factor, 3));
+  const level4Calibrated = Math.round(level4Count * Math.pow(factor, 4));
+  const level5Calibrated = Math.round(level5Count * Math.pow(factor, 5));
+
+  const totalMembrosCalibrated = level1Calibrated + level2Calibrated + level3Calibrated + level4Calibrated + level5Calibrated;
+  const totalDonationsCalibrated = totalMembrosCalibrated * 10;
 
   const testimonials = [
     {
@@ -107,16 +119,20 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
 
   const faqs = [
     {
-      q: 'A ajuda mútua é legal?',
-      a: 'Sim. Doações financeiras espontâneas entre pessoas físicas são totalmente legais e previstas no Código Civil Brasileiro. Não somos uma empresa de investimentos e não há promessa de rendimentos.'
+      q: 'Qual o enquadramento legal e quais são os riscos do sistema?',
+      a: 'A doação entre pessoas físicas é um ato espontâneo previsto no Artigo 538 do Código Civil Brasileiro. Para garantir estrita conformidade com a legislação contra esquemas insustentáveis (Lei 1.521/51), a plataforma atua exclusivamente como ferramenta de software e orquestração de rede. Não realizamos oferta pública de investimentos, não prometemos rendimentos fixos e não garantimos retornos automáticos. Os resultados dependem inteiramente da duplicação e adesão voluntária dos membros.'
+    },
+    {
+      q: 'O que acontece se a rede desacelerar ou estagnar?',
+      a: 'Caso novos membros pararem de aderir à rede, o fluxo de novas doações simplesmente desacelera ou faz uma pausa. Contudo, como a plataforma NÃO custodiou recursos nem prometeu juros acumulados, NÃO há geração de dívidas passivas, prejuízos sistêmicos ou falência de fundo central. Cada transferência realizada é voluntária, individual e liquidada imediatamente de conta bancária para conta bancária.'
     },
     {
       q: 'Minha chave PIX está segura?',
-      a: 'Sua chave PIX é utilizada exclusivamente para receber transferências de outros usuários. Nosso sistema não possui acesso à sua conta bancária nem realiza débitos automáticos.'
+      a: 'Sua chave PIX é utilizada exclusivamente para receber transferências diretas de outros usuários da sua rede de doação. Nosso sistema não possui acesso à sua conta bancária, não realiza movimentações e não executa débitos automáticos.'
     },
     {
-      q: 'Como funciona a agilidade do sistema?',
-      a: 'Os pagamentos são processados em tempo real, diretamente via PIX P2P (ponto a ponto). Não há retenção de saldo na plataforma, o dinheiro cai imediatamente na sua conta bancária. Mesmo que em média as pessoas da sua rede indiquem 2 ou 3 pessoas ativas o sistema ainda continua gerando retornos. Se alguém na sua rede parar, o sistema comprime automaticamente e busca o próximo membro ativo garantindo que o sistema não quebre.'
+      q: 'Como funciona o roteamento e a agilidade do sistema?',
+      a: 'Os pagamentos são processados em tempo real, diretamente via PIX P2P (ponto a ponto). Não há retenção de saldo na plataforma, o dinheiro cai imediatamente na sua conta bancária. O servidor centralizado orquestra as regras de 5 níveis e aplica compressão dinâmica caso algum membro da sua linha ascendente esteja inativo.'
     },
     {
       q: 'Como funciona o suporte para membros ativos?',
@@ -253,7 +269,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                 </h1>
                 
                 <p className="text-lg text-slate-400 mb-10 max-w-2xl mx-auto lg:mx-0">
-                  Um sistema de roteamento inteligente que organiza fluxos de doações diretas entre os participantes de uma comunidade descentralizada e colaborativa, de forma 100% P2P e transparente.
+                  Um sistema de roteamento automatizado que organiza doações diretas via PIX (100% P2P) com regras transparentes e mapeamento de rede inteligente.
                 </p>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -387,13 +403,13 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Simulador de Projeção P2P</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-base">
-              Ajuste a quantidade de indicados diretos e a média de duplicação para visualizar o poder de multiplicação geométrica de doações em 5 níveis de profundidade.
+              Ajuste a quantidade de indicados diretos, a média de duplicação e a <strong>taxa de eficiência (atrito real de mercado)</strong> para visualizar projeções realistas de doações em 5 níveis.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-8 items-stretch">
             {/* Left Column: Sliders */}
-            <div className="lg:col-span-5 bg-[#161616] p-8 rounded-2xl border border-white/5 flex flex-col justify-between space-y-8">
+            <div className="lg:col-span-5 bg-[#161616] p-8 rounded-2xl border border-white/5 flex flex-col justify-between space-y-6">
               <div>
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                   <TrendingUp className="text-[#00FF85]" size={20} />
@@ -401,10 +417,10 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                 </h3>
                 
                 {/* Slider 1 */}
-                <div className="space-y-4 mb-8">
+                <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-semibold text-slate-200 font-sans">Seus Indicados Diretos (Nível 1)</label>
-                    <span className="text-lg font-bold text-[#00FF85] bg-[#00FF85]/10 px-3 py-1 rounded-lg border border-[#00FF85]/20 font-mono">{directReferrals}</span>
+                    <label className="text-xs font-semibold text-slate-200 font-sans">Seus Indicados Diretos (Nível 1)</label>
+                    <span className="text-base font-bold text-[#00FF85] bg-[#00FF85]/10 px-2.5 py-0.5 rounded-lg border border-[#00FF85]/20 font-mono">{directReferrals}</span>
                   </div>
                   <input 
                     type="range" 
@@ -414,16 +430,16 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                     onChange={(e) => setDirectReferrals(Number(e.target.value))}
                     className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#00FF85]"
                   />
-                  <p className="text-xs text-slate-500 leading-normal font-sans">
+                  <p className="text-[11px] text-slate-500 leading-normal font-sans">
                     Pessoas que você convida diretamente com o seu link e que doam R$ 10,00 para você (Nível 1).
                   </p>
                 </div>
 
                 {/* Slider 2 */}
-                <div className="space-y-4">
+                <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-semibold text-slate-200 font-sans font-sans">Média de Duplicação (Níveis 2 a 5)</label>
-                    <span className="text-lg font-bold text-[#00FF85] bg-[#00FF85]/10 px-3 py-1 rounded-lg border border-[#00FF85]/20 font-mono">{duplicationRate}</span>
+                    <label className="text-xs font-semibold text-slate-200 font-sans">Média de Duplicação (Níveis 2 a 5)</label>
+                    <span className="text-base font-bold text-[#00FF85] bg-[#00FF85]/10 px-2.5 py-0.5 rounded-lg border border-[#00FF85]/20 font-mono">{duplicationRate}</span>
                   </div>
                   <input 
                     type="range" 
@@ -433,18 +449,45 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                     onChange={(e) => setDuplicationRate(Number(e.target.value))}
                     className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#00FF85]"
                   />
-                  <p className="text-xs text-slate-500 leading-normal font-sans">
+                  <p className="text-[11px] text-slate-500 leading-normal font-sans">
                     Média de novos membros que cada participante convida na sequência da sua rede.
+                  </p>
+                </div>
+
+                {/* Slider 3 - Realism & Market Friction Calibration */}
+                <div className="space-y-3 bg-[#121212] p-4 rounded-xl border border-amber-500/20">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-amber-400 font-sans flex items-center gap-1.5">
+                      <ShieldCheck size={14} />
+                      Eficiência / Retenção Real (Atrito)
+                    </label>
+                    <span className="text-base font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border border-amber-500/20 font-mono">{retentionRate}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="20" 
+                    max="100" 
+                    step="5"
+                    value={retentionRate} 
+                    onChange={(e) => setRetentionRate(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                  />
+                  <p className="text-[11px] text-slate-400 leading-normal font-sans">
+                    Calibração matemática: Simula a taxa real de adesão e atrito de mercado ({100 - retentionRate}% de desistência/inativação na rede).
                   </p>
                 </div>
               </div>
 
               <div className="bg-[#121212] p-4 rounded-xl border border-white/5 space-y-2">
                 <div className="flex justify-between text-xs text-slate-400 font-sans">
-                  <span>Total de Membros na Rede:</span>
-                  <span className="font-bold text-white font-mono">{totalMembros.toLocaleString('pt-BR')}</span>
+                  <span>Membros Ativos Estimados (Realista):</span>
+                  <span className="font-bold text-amber-400 font-mono">{totalMembrosCalibrated.toLocaleString('pt-BR')}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-400 font-sans">
+                  <span>Membros Teóricos (100% Matriz Cheia):</span>
+                  <span className="font-bold text-slate-400 font-mono">{totalMembrosTheoretical.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400 font-sans border-t border-white/5 pt-2">
                   <span>Valor de Ativação por Membro:</span>
                   <span className="font-bold text-[#00FF85] font-mono">R$ 50,00</span>
                 </div>
@@ -454,74 +497,86 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
             {/* Right Column: Calculations & Breakdown */}
             <div className="lg:col-span-7 bg-[#161616] p-8 rounded-2xl border border-white/5 flex flex-col justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-400 mb-6 uppercase tracking-wider text-xs font-sans">
-                  Projeção de Recebimento por Nível (R$ 10 por doador)
-                </h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-slate-400 uppercase tracking-wider text-xs font-sans">
+                    Projeção por Nível (R$ 10 por doador ativo)
+                  </h3>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                    Com {retentionRate}% de Eficiência
+                  </span>
+                </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Level 1 */}
-                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-[#121212] p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-sans">1º Nível (Seus Convidados)</span>
-                      <span className="text-sm font-semibold text-white font-sans">{level1Count} {level1Count === 1 ? 'membro' : 'membros'} × R$ 10,00</span>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block font-sans">1º Nível (Seus Convidados)</span>
+                      <span className="text-xs font-semibold text-white font-sans">{level1Calibrated} ativos <span className="text-slate-500">({level1Count} teóricos)</span> × R$ 10,00</span>
                     </div>
-                    <span className="text-lg font-bold text-[#00FF85] font-mono">R$ {level1Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[#00FF85] font-mono">R$ {(level1Calibrated * 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   {/* Level 2 */}
-                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-[#121212] p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-sans">2º Nível (Convidados deles)</span>
-                      <span className="text-sm font-semibold text-white font-sans">{level2Count} {level2Count === 1 ? 'membro' : 'membros'} × R$ 10,00</span>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block font-sans">2º Nível (Convidados deles)</span>
+                      <span className="text-xs font-semibold text-white font-sans">{level2Calibrated} ativos <span className="text-slate-500">({level2Count} teóricos)</span> × R$ 10,00</span>
                     </div>
-                    <span className="text-lg font-bold text-[#00FF85] font-mono">R$ {level2Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[#00FF85] font-mono">R$ {(level2Calibrated * 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   {/* Level 3 */}
-                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-[#121212] p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-sans">3º Nível (Indiretos)</span>
-                      <span className="text-sm font-semibold text-white font-sans">{level3Count} {level3Count === 1 ? 'membro' : 'membros'} × R$ 10,00</span>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block font-sans">3º Nível (Indiretos)</span>
+                      <span className="text-xs font-semibold text-white font-sans">{level3Calibrated} ativos <span className="text-slate-500">({level3Count} teóricos)</span> × R$ 10,00</span>
                     </div>
-                    <span className="text-lg font-bold text-[#00FF85] font-mono">R$ {level3Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[#00FF85] font-mono">R$ {(level3Calibrated * 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   {/* Level 4 */}
-                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-[#121212] p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-sans">4º Nível (Indiretos)</span>
-                      <span className="text-sm font-semibold text-white font-sans">{level4Count} {level4Count === 1 ? 'membro' : 'membros'} × R$ 10,00</span>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block font-sans">4º Nível (Indiretos)</span>
+                      <span className="text-xs font-semibold text-white font-sans">{level4Calibrated} ativos <span className="text-slate-500">({level4Count} teóricos)</span> × R$ 10,00</span>
                     </div>
-                    <span className="text-lg font-bold text-[#00FF85] font-mono">R$ {level4Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[#00FF85] font-mono">R$ {(level4Calibrated * 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
 
                   {/* Level 5 */}
-                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-[#121212] p-3.5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-sans">5º Nível (Indiretos)</span>
-                      <span className="text-sm font-semibold text-white font-sans">{level5Count} {level5Count === 1 ? 'membro' : 'membros'} × R$ 10,00</span>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block font-sans">5º Nível (Indiretos)</span>
+                      <span className="text-xs font-semibold text-white font-sans">{level5Calibrated} ativos <span className="text-slate-500">({level5Count} teóricos)</span> × R$ 10,00</span>
                     </div>
-                    <span className="text-lg font-bold text-[#00FF85] font-mono">R$ {level5Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-base font-bold text-[#00FF85] font-mono">R$ {(level5Calibrated * 10).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/5">
+              <div className="mt-6 pt-6 border-t border-white/5">
                 <div className="bg-gradient-to-r from-[#00FF85]/10 to-emerald-500/10 p-6 rounded-xl border border-[#00FF85]/20 flex flex-col sm:flex-row items-center justify-between gap-6">
                   <div>
-                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block font-sans">Total Potencial de Doações</span>
-                    <span className="text-3xl font-extrabold text-[#00FF85] font-mono">R$ {totalDonations.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xs text-amber-400 font-bold uppercase tracking-wider block font-sans mb-1">
+                      Projeção Realista ({retentionRate}% de Eficiência)
+                    </span>
+                    <span className="text-3xl font-extrabold text-[#00FF85] font-mono">
+                      R$ {totalDonationsCalibrated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="block text-[11px] text-slate-400 mt-1 font-sans">
+                      Máximo teórico (100% preenchido): <strong className="text-slate-300">R$ {totalDonationsTheoretical.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    </span>
                   </div>
                   <button 
                     onClick={onStart}
-                    className="w-full sm:w-auto bg-[#00FF85] hover:bg-[#00cc6a] text-[#121212] font-bold text-sm px-6 py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(0,255,133,0.2)] hover:shadow-[0_0_30px_rgba(0,255,133,0.4)] cursor-pointer"
+                    className="w-full sm:w-auto bg-[#00FF85] hover:bg-[#00cc6a] text-[#121212] font-bold text-sm px-6 py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(0,255,133,0.2)] hover:shadow-[0_0_30px_rgba(0,255,133,0.4)] cursor-pointer shrink-0"
                   >
                     Ativar Meu Fluxo
                   </button>
                 </div>
-                <p className="mt-4 text-[10px] text-slate-500 leading-normal text-center sm:text-left font-sans">
-                  * Os valores apresentados são simulações ilustrativas baseadas na progressão geométrica. O recebimento efetivo das doações espontâneas depende diretamente do cadastro e ativação de novos membros por parte da rede.
-                </p>
+                <div className="mt-4 p-3 bg-[#121212] border border-amber-500/20 rounded-lg text-[11px] text-slate-400 leading-relaxed font-sans">
+                  <strong className="text-amber-400">Nota de Transparência Técnica & Calibração Realista:</strong> Diferente de modelos que prometem matrizes 100% preenchidas sem considerar atrito do mundo real, este simulador permite calibrar taxas reais de retenção e saturação. O recebimento efetivo de doações espontâneas depende do engajamento e ativação real dos membros na rede.
+                </div>
               </div>
             </div>
           </div>
@@ -649,9 +704,9 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
       <section className="py-24 px-6 bg-[#161616] border-y border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-white mb-4">Arquitetura de Fluxo Descentralizado</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
-              Nossa tecnologia distribui os pagamentos através de um algoritmo de 5 níveis de profundidade, garantindo o máximo de expansão e sustentabilidade da rede.
+            <h2 className="text-3xl font-bold text-white mb-4">Roteamento Automatizado P2P e Governança Centralizada</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto leading-relaxed">
+              Embora todas as doações via PIX ocorram de forma 100% direta de conta para conta (P2P, sem retenção de valores), o mapeamento de rede e a validação de regras operam sob a inteligência e governança de um software centralizado.
             </p>
           </div>
 
@@ -660,9 +715,9 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
               <div className="w-12 h-12 bg-[#00FF85]/10 rounded-xl flex items-center justify-center text-[#00FF85] mb-6">
                 <Users size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Rede de 5 Níveis</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Mapeamento Automatizado em 5 Níveis</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Ao compartilhar seu link, seus indicados pagarão diretamente a você e a outras 4 pessoas da sua linha ascendente, criando um efeito de alavancagem progressiva.
+                Ao compartilhar seu link, o algoritmo mapeia sua matriz de doações até o 5º nível e indica exatamente quais recebedores devem ser contemplados em cada etapa.
               </p>
             </div>
             
@@ -670,9 +725,9 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
               <div className="w-12 h-12 bg-[#00FF85]/10 rounded-xl flex items-center justify-center text-[#00FF85] mb-6">
                 <Activity size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Roteamento Inteligente</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Roteamento e Regras Centralizadas</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Nosso sistema apenas exibe a ordem de pagamento. O algoritmo calcula instantaneamente quem deve receber cada cota da doação.
+                O banco de dados centralizado gerencia a verificação de comprovantes e aciona a compressão dinâmica caso algum participante da linha ascendente esteja inativo.
               </p>
             </div>
 
@@ -680,9 +735,9 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
               <div className="w-12 h-12 bg-[#00FF85]/10 rounded-xl flex items-center justify-center text-[#00FF85] mb-6">
                 <ShieldCheck size={24} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Fluxo P2P Direto</h3>
+              <h3 className="text-xl font-bold text-white mb-3">Liquidação Direta P2P</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Sem conta central, sem pedido de saque. O valor sai da conta do novo membro e cai diretamente na sua conta bancária cadastrada via PIX.
+                A plataforma não custodia saldo nem intermediou valores. As doações financeiras saem da conta bancária de quem doa e caem diretamente na chave PIX cadastrada.
               </p>
             </div>
           </div>
@@ -811,7 +866,7 @@ export default function Landing({ onStart, onAdminClick }: LandingProps) {
                 <img src={LOGO_IMAGE_URL} alt="Direct Cash Pix" className="h-16 w-auto max-w-[220px] rounded-xl object-contain opacity-90" referrerPolicy="no-referrer" />
               </div>
               <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                Plataforma de tecnologia descentralizada de direcionamento PIX. Não somos instituição financeira.
+                Plataforma de tecnologia de roteamento automatizado de transferências PIX com governança centralizada. Não somos instituição financeira nem intermediamos custódia de valores.
               </p>
             </div>
             

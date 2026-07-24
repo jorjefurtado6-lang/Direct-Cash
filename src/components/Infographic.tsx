@@ -284,7 +284,128 @@ export default function Infographic({ onStart }: InfographicProps) {
           </div>
         </div>
 
-        {/* STEP 3: POR QUE PARTICIPAR (BENEFITS) */}
+        {/* STEP 3: DIAGRAMA TÉCNICO DE ORQUESTRAÇÃO (FLUXO DE DADOS VS FLUXO FINANCEIRO) */}
+        <div className="mb-20 bg-[#121212] border border-white/10 rounded-3xl p-6 sm:p-10 relative overflow-hidden">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
+              <ShieldCheck size={14} />
+              Arquitetura de Software & Transparência Técnica
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black text-white mb-3">
+              Fluxo de Dados vs. Fluxo Financeiro (P2P)
+            </h3>
+            <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed">
+              Diferenciação clara entre a orquestração centralizada de dados pelo software e a liquidação financeira descentralizada direta entre os participantes.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+            {/* Column 1: Vertical Data Flow */}
+            <div className="bg-[#161616] p-6 sm:p-8 rounded-2xl border border-white/5 flex flex-col justify-between relative">
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-widest font-mono flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
+                    1. Fluxo de Dados (Vertical / Servidor)
+                  </span>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded font-mono">
+                    Software Central
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">A</div>
+                    <div>
+                      <h5 className="text-white font-bold text-sm">Membro Doador</h5>
+                      <p className="text-slate-400 text-xs mt-0.5">Solicita no painel a chave PIX do próximo nível ascendente na matriz.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <ArrowDown size={20} className="text-amber-400 my-1 animate-bounce" />
+                  </div>
+
+                  <div className="bg-[#121212] p-4 rounded-xl border border-amber-500/20 flex items-start gap-3 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">SVR</div>
+                    <div>
+                      <h5 className="text-amber-400 font-bold text-sm">Servidor Direct Cash (Banco de Dados)</h5>
+                      <p className="text-slate-400 text-xs mt-0.5">Mapeia a matriz de 5 níveis, aplica a compressão de inativos e retorna a chave PIX exata do destinatário.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <ArrowDown size={20} className="text-amber-400 my-1" />
+                  </div>
+
+                  <div className="bg-[#121212] p-4 rounded-xl border border-white/5 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">B</div>
+                    <div>
+                      <h5 className="text-white font-bold text-sm">Membro Recebedor Indicado</h5>
+                      <p className="text-slate-400 text-xs mt-0.5">Fornece sua chave PIX pessoal para o recebimento direto na sua conta bancária.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/5 text-[11px] text-slate-400 leading-relaxed font-sans">
+                💡 <strong>Governança de Dados:</strong> O software atua estritamente como um orquestrador e validador de regras de rede.
+              </div>
+            </div>
+
+            {/* Column 2: Horizontal Financial Flow */}
+            <div className="bg-[#161616] p-6 sm:p-8 rounded-2xl border border-[#00FF85]/20 flex flex-col justify-between relative shadow-[0_0_25px_rgba(0,255,133,0.05)]">
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                  <span className="text-xs font-bold text-[#00FF85] uppercase tracking-widest font-mono flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#00FF85] animate-pulse"></div>
+                    2. Fluxo Financeiro (Horizontal / P2P)
+                  </span>
+                  <span className="text-[10px] bg-[#00FF85]/10 text-[#00FF85] border border-[#00FF85]/20 px-2 py-0.5 rounded font-mono">
+                    100% P2P Bancário
+                  </span>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-r from-emerald-950/60 to-slate-900/60 p-5 rounded-2xl border border-[#00FF85]/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-white font-mono">Aplicativo do Banco (Conta A)</span>
+                      <span className="text-xs font-black text-[#00FF85] font-mono">PIX Direto</span>
+                      <span className="text-xs font-bold text-white font-mono">Aplicativo do Banco (Conta B)</span>
+                    </div>
+                    <div className="w-full bg-black/60 h-3 rounded-full overflow-hidden p-0.5 border border-white/10 relative">
+                      <div className="bg-[#00FF85] h-full rounded-full w-full animate-pulse"></div>
+                    </div>
+                    <p className="text-center text-xs font-mono text-[#00FF85] mt-3 font-bold">
+                      Sem taxa de intermediação • Sem saldo mantido no site • Instantâneo
+                    </p>
+                  </div>
+
+                  <div className="bg-[#121212] p-5 rounded-2xl border border-white/5 space-y-3">
+                    <h5 className="text-white font-bold text-sm flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-[#00FF85]" />
+                      Ausência Total de Risco de Insolvência Centralizada
+                    </h5>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      Como a plataforma <strong>nunca custodia o dinheiro dos usuários</strong> e não oferece rendimentos passivos nem juros acumulados:
+                    </p>
+                    <ul className="text-slate-300 text-xs space-y-2 list-disc pl-4 leading-relaxed">
+                      <li><strong>Se a rede estagnar:</strong> As novas doações simplesmente pausam.</li>
+                      <li><strong>Sem acúmulo de dívidas:</strong> Não existe folha de pagamentos pendente ou rombo financeiro.</li>
+                      <li><strong>Segurança Pessoal:</strong> Cada doação é voluntária (Art. 538 do Código Civil) e liquidada diretamente entre partes.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/5 text-[11px] text-[#00FF85] leading-relaxed font-sans">
+                ✓ <strong>Transparência Radical:</strong> O Direct Cash Pix une liquidação financeira P2P com inteligência de software centralizada.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* STEP 4: POR QUE PARTICIPAR (BENEFITS) */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
           <div className="bg-[#121212] border border-white/10 rounded-2xl p-6 sm:p-8 hover:border-[#00FF85]/30 transition-all flex gap-5 items-start">
             <div className="w-12 h-12 rounded-xl bg-[#00FF85]/10 border border-[#00FF85]/30 flex items-center justify-center text-[#00FF85] shrink-0">
